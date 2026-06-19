@@ -52,7 +52,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                     log.debug("Token válido para: {}", username);
                 } else {
-                    log.warn("Token inválido o username nulo");
+                    log.warn("Token inválido o username nulo para ruta: {}", path);
                 }
             } catch (Exception e) {
                 log.error("Error procesando token JWT: {}", e.getMessage());

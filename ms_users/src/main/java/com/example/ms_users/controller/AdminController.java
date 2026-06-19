@@ -7,6 +7,12 @@ import com.example.ms_users.exception.custom.UserNotFoundException;
 import com.example.ms_users.model.Role;
 import com.example.ms_users.model.User;
 import com.example.ms_users.service.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,20 +23,28 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
+
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
 
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/admin")
 @RequiredArgsConstructor
+@SecurityRequirement(name = "bearerAuth")
+@Tag(name = "Administración de Usuarios", description = "Endpoints exclusivos para administradores (ADMIN)")
 public class AdminController {
 
     private final UserService userService;
 
-    // ========== LISTAR TODOS LOS USUARIOS ==========
-
     @GetMapping("/users")
     @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Listar todos los usuarios", description = "Retorna todos los usuarios registrados.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Lista obtenida"),
+            @ApiResponse(responseCode = "403", description = "Acceso denegado (no ADMIN)")
+    })
     public ResponseEntity<?> getAllUsers() {
         log.info("ADMIN - Solicitud de listar todos los usuarios");
 
@@ -46,11 +60,15 @@ public class AdminController {
         ));
     }
 
-    // ========== OBTENER USUARIO POR USERNAME ==========
-
     @GetMapping("/users/{username}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> getUserByUsername(@PathVariable String username) {
+    @Operation(summary = "Obtener usuario por su username", description = "Retorna los datos de un usuario específico.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Usuario encontrado"),
+            @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
+    })
+    public ResponseEntity<?> getUserByUsername(@Parameter(description = "Nombre de usuario", example = "Fernando Carnaca Supremo I")
+                                               @PathVariable String username) {
         log.info("ADMIN - Solicitando información del usuario: {}", username);
 
         try {
@@ -68,11 +86,15 @@ public class AdminController {
         }
     }
 
-    // ========== BUSCAR USUARIOS POR ROL ==========
-
     @GetMapping("/users/role/{role}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> getUsersByRole(@PathVariable String role) {
+    @Operation(summary = "Buscar usuarios por rol", description = "Retorna todos los usuarios con un rol específico.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Lista filtrada"),
+            @ApiResponse(responseCode = "400", description = "Rol inválido")
+    })
+    public ResponseEntity<?> getUsersByRole(@Parameter(description = "Rol (ADMIN, EMPLOYEE, CLIENT)", example = "CLIENT")
+                                            @PathVariable String role) {
         log.info("ADMIN - Solicitando usuarios por rol: {}", role);
 
         try {
@@ -99,11 +121,35 @@ public class AdminController {
         }
     }
 
-    // ========== ACTUALIZAR USUARIO (ADMIN) ==========
+    @GetMapping("{id}")
+    @Operation(summary = "Obtener usuario por ID (con enlaces HATEOAS)", description = "Retorna el usuario con enlaces HAL.????????")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Usuario encontrado"),
+            @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
+    })
+    public ResponseEntity<User> findById(@Parameter(description = "ID del usuario", example = "1")
+                                         @PathVariable Long id) {
+        Optional<User> userOpt = userService.findById(id);
+        if(!userOpt.isPresent()) {
+            return ResponseEntity.notFound().build();
+        }
+        User user = userOpt.get();
+        //user.add(linkTo(methodOn(AdminController.class).findAll()).withRel("todos"));
+        user.add(linkTo(methodOn(AdminController.class)
+                .findById(user.getUserId())).withSelfRel());
+        return ResponseEntity.ok(user);
+    }
 
     @PutMapping("/users/{username}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> updateUserByAdmin(@PathVariable String username,
+    @Operation(summary = "Actualizar usuario por admin", description = "Permite a un administrador modificar los datos de cualquier usuario.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Usuario actualizado"),
+            @ApiResponse(responseCode = "400", description = "Datos inválidos"),
+            @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
+    })
+    public ResponseEntity<?> updateUserByAdmin(@Parameter(description = "Nombre de usuario", example = "Fernando Carnaca Supremo I")
+                                               @PathVariable String username,
                                                @Valid @RequestBody UserUpdateDTO updateDTO) {
         log.info("ADMIN - Actualizando usuario: {}", username);
 
@@ -128,11 +174,15 @@ public class AdminController {
         }
     }
 
-    // ========== ELIMINAR USUARIO (ADMIN) ==========
-
     @DeleteMapping("/users/{username}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> deleteUserByUsername(@PathVariable String username) {
+    @Operation(summary = "Eliminar usuario por un admin", description = "Elimina la cuenta de un usuario (solo ADMIN).")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Usuario eliminado"),
+            @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
+    })
+    public ResponseEntity<?> deleteUserByUsername(@Parameter(description = "Nombre de usuario", example = "Fernando Carnaca Supremo I")
+                                                  @PathVariable String username) {
         log.warn("ADMIN - Eliminando usuario: {}", username);
 
         try {
@@ -154,11 +204,16 @@ public class AdminController {
         }
     }
 
-    // ========== CAMBIAR ROL DE USUARIO ==========
-
     @PatchMapping("/users/{username}/role")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> changeUserRole(@PathVariable String username,
+    @Operation(summary = "Cambiar el rol de un usuario", description = "Modifica el rol de un usuario (solo ADMIN).")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Rol actualizado"),
+            @ApiResponse(responseCode = "400", description = "Rol inválido"),
+            @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
+    })
+    public ResponseEntity<?> changeUserRole(@Parameter(description = "Nombre de usuario", example = "Fernando Carnaca Supremo I")
+                                            @PathVariable String username,
                                             @RequestBody Map<String, String> body) {
         String newRole = body.get("role");
         log.info("ADMIN - Cambiando rol del usuario {} a: {}", username, newRole);
@@ -194,11 +249,15 @@ public class AdminController {
         }
     }
 
-    // ========== BUSCAR USUARIO POR EMAIL ==========
-
     @GetMapping("/users/search/email")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> searchUserByEmail(@RequestParam String email) {
+    @Operation(summary = "Buscar usuario por email", description = "Retorna un usuario por su email exacto.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Usuario encontrado"),
+            @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
+    })
+    public ResponseEntity<?> searchUserByEmail(@Parameter(description = "Correo electrónico", example = "fer_carnaca@gmail.com")
+                                               @RequestParam String email) {
         log.info("ADMIN - Buscando usuario por email: {}", email);
 
         try {
@@ -216,13 +275,14 @@ public class AdminController {
         }
     }
 
-    // ========== MeTODO UTILITARIO ==========
+    // ========== METODO UTILITARIO ==========
 
     private UserResponseDTO mapToResponseDTO(User user) {
         return UserResponseDTO.builder()
                 .userId(user.getUserId())
                 .username(user.getUsername())
                 .email(user.getEmail())
+                .address(user.getAddress())
                 .role(user.getRole().name())
                 .phone(user.getPhone())
                 .createdAt(user.getCreatedAt())

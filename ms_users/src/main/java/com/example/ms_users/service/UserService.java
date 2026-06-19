@@ -42,9 +42,9 @@ public class UserService {
         return repository.findByEmail(email).isPresent();
     }
 
-    // ========== REGISTRO (SIN address) ==========
+    // ========== REGISTRO ==========
 
-    public User register(String username, String password, Role role, String email, String phone) {
+    public User register(String username, String password, Role role, String email, String phone, String address) {
         log.info("Registrando nuevo usuario: {}", username);
 
         // Verificaciones adicionales
@@ -61,6 +61,7 @@ public class UserService {
                 .email(email)
                 .role(role != null ? role : Role.CLIENT)
                 .phone(phone)
+                .address(address)
                 .build();
         User saved = repository.save(user);
         log.info("Usuario registrado con éxito: {} (id: {})", username, saved.getUserId());
@@ -141,6 +142,10 @@ public class UserService {
         if (updateDTO.getPhone() != null) {
             user.setPhone(updateDTO.getPhone());
             log.debug("Teléfono actualizado para {}", username);
+        }
+
+        if (updateDTO.getAddress() != null) {
+            user.setAddress(updateDTO.getAddress());
         }
 
         User saved = repository.save(user);

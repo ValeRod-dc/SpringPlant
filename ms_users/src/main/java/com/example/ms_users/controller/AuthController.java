@@ -11,6 +11,11 @@ import com.example.ms_users.model.Role;
 import com.example.ms_users.model.User;
 import com.example.ms_users.security.jwt.JwtService;
 import com.example.ms_users.service.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +34,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
+@Tag(name = "Autenticación y Registro", description = "Endpoints públicos para autenticación y registro de usuarios")
 public class AuthController {
 
     private final AuthenticationManager authManager;
@@ -38,6 +44,15 @@ public class AuthController {
     // ========== ENDPOINTS PÚBLICOS ==========
 
     @PostMapping("/register")
+    @Operation(
+            summary = "Registrar nuevo usuario",
+            description = "Crea un nueva cuenta de usuario con rol, email y teléfono."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Usuario registrado con exito"),
+            @ApiResponse(responseCode = "400", description = "Datos inválidos"),
+            @ApiResponse(responseCode = "409", description = "Username o email ya existente")
+    })
     public ResponseEntity<?> register(@Valid @RequestBody UserRequestDTO userRequest) {
         log.info("Intentando registrar usuario: {}", userRequest.getUsername());
 
@@ -74,7 +89,8 @@ public class AuthController {
                 userRequest.getPassword(),
                 role,
                 userRequest.getEmail(),
-                userRequest.getPhone()
+                userRequest.getPhone(),
+                userRequest.getAddress()
         );
 
         UserResponseDTO response = UserResponseDTO.builder()
@@ -90,6 +106,11 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @Operation(summary = "Iniciar sesión", description = "Autentica usuario y retorna token JWT.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Login existoso, retorna token"),
+            @ApiResponse(responseCode = "401", description = "Credenciales inválidas")
+    })
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody AuthRequestDTO authRequest) {
         log.info("Intento de login para: {}", authRequest.getUsername());
@@ -131,13 +152,21 @@ public class AuthController {
     }
 
     @GetMapping("/validate")
+    @Operation(summary = "Validar token", description = "Verificar si el token JWT es válido (se envía en el header Authorization).")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Token válido"),
+            @ApiResponse(responseCode = "401", description = "Token inválido o ausente")
+    })
     public ResponseEntity<?> validateToken() {
         log.debug("Validación de token solicitada");
         return ResponseEntity.ok(Map.of("valid", true));
     }
 
     @GetMapping("/user-exists/{username}")
-    public ResponseEntity<?> userExists(@PathVariable String username) {
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Respuesta con campo 'exists'")
+    })
+    public ResponseEntity<?> userExists(@Parameter(description = "Nombre de usuario a verificar", example = "Fernando Carnaca Supremo I") @PathVariable String username) {
         boolean exists = userService.existsByUsername(username);
         log.debug("Verificando existencia de usuario: {} -> {}", username, exists);
         return ResponseEntity.ok(Map.of("exists", exists));
@@ -147,6 +176,12 @@ public class AuthController {
 
     @GetMapping("/user/profile")
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE', 'CLIENT')")
+    @Operation(summary = "Obtener perfil propio", description = "Retorna los datos del usuario autenticado.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Perfil obtenido"),
+            @ApiResponse(responseCode = "401", description = "No autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acceso denegado")
+    })
     public ResponseEntity<?> getMyProfile(Authentication authentication) {
         if (authentication == null || authentication.getName() == null) {
             log.warn("Intento de obtener perfil - Usuario no autenticado");
@@ -170,5 +205,19 @@ public class AuthController {
                 .build();
 
         return ResponseEntity.ok(Map.of("user", response));
+    }
+
+    @GetMapping("/user-id/{username}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Obtener ID de usuario por su username", description = "Retorna el ID del usuario (endpoint para servicios internos).")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "ID retornado"),
+            @ApiResponse(responseCode = "404", description = "Usuario no encontrado: ")
+    })
+    public ResponseEntity<?> getUserIdByUsername(@Parameter(description = "Nombre de usuario", example = "Fernando Carnaca Supremo I") @PathVariable String username) {
+        log.debug("Obteniendo ID de usuario: {}", username);
+        User user = userService.findByUsername(username)
+                .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado: " + username));
+        return ResponseEntity.ok(Map.of("userId", user.getUserId()));
     }
 }

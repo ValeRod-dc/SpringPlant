@@ -6,6 +6,11 @@ import com.example.ms_cart.dto.response.CartResponseDTO;
 import com.example.ms_cart.model.Cart;
 import com.example.ms_cart.model.CartItem;
 import com.example.ms_cart.service.CartService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,19 +20,32 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/cart")
 @RequiredArgsConstructor
+@SecurityRequirement(name = "bearerAuth")
+@Tag(
+        name = "Carrito de Compras",
+        description = "Endpoints para gestionar el carrito del usuario autenticado"
+)
 public class CartController {
 
     private final CartService cartService;
 
-    // Obtener mi carrito
     @GetMapping
+    @Operation(
+            summary = "Obtener mi carrito",
+            description = "Retorna el carrito actual del usuario autenticado con todos sus ítems y el total."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Carrito encontrado con exito."),
+            @ApiResponse(responseCode = "401", description = "No autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acceso denegado"),
+            @ApiResponse(responseCode = "404", description = "Carrito no encontrado (debería crearse automáticamente)")
+    })
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE', 'CLIENT')")
     public ResponseEntity<CartResponseDTO> getMyCart(Authentication authentication) {
         String username = authentication.getName();
@@ -36,8 +54,19 @@ public class CartController {
         return ResponseEntity.ok(mapToResponseDTO(cart));
     }
 
-    // Agregar item al carrito
     @PostMapping("/items")
+    @Operation(
+            summary = "Agregar item al carrito",
+            description = "Añade un producto al carrito del usuario. Si ya existe, incrementa la cantidad."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Item añadido correctamente."),
+            @ApiResponse(responseCode = "400", description = "Solicitud inválida (ej. Cantidad <= 0)"),
+            @ApiResponse(responseCode = "401", description = "No autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acceso denegado"),
+            @ApiResponse(responseCode = "404", description = "Producto o usuario no encontrado"),
+            @ApiResponse(responseCode = "409", description = "Stock insuficiente")
+    })
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE', 'CLIENT')")
     public ResponseEntity<CartResponseDTO> addItem(Authentication authentication,
                                                    @Valid @RequestBody AddItemRequest request) {
@@ -47,8 +76,16 @@ public class CartController {
         return ResponseEntity.status(HttpStatus.CREATED).body(mapToResponseDTO(updatedCart));
     }
 
-    // Eliminar item del carrito
     @DeleteMapping("/items/{productId}")
+    @Operation(
+            summary = "Eliminar item del carrito",
+            description = "Remueve completamente un producto del carrito del usuario"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Item eliminado correctamente. Se retorna el carrito actualizado."),
+            @ApiResponse(responseCode = "401", description = "No autenticado"),
+            @ApiResponse(responseCode = "404", description = "Producto no encontrado en el carrito")
+    })
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE', 'CLIENT')")
     public ResponseEntity<CartResponseDTO> removeItem(Authentication authentication,
                                                       @PathVariable Long productId) {
@@ -58,8 +95,15 @@ public class CartController {
         return ResponseEntity.ok(mapToResponseDTO(updatedCart));
     }
 
-    // Limpiar carrito
     @DeleteMapping
+    @Operation(
+            summary = "Limpiar carrito",
+            description = "Elimina todos los ítems del carrito del usuario autenticado."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Carrito vaciado con exito"),
+            @ApiResponse(responseCode = "401", description = "No autenticado")
+    })
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE', 'CLIENT')")
     public ResponseEntity<Void> clearCart(Authentication authentication) {
         String username = authentication.getName();
@@ -68,8 +112,16 @@ public class CartController {
         return ResponseEntity.noContent().build();
     }
 
-    // Actualizar cantidad de un item
     @PutMapping("/items/{productId}")
+    @Operation(
+            summary = "Actualizar cantidad de un item",
+            description = "Cambia la cantidad de un producto específico en el carrito."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Cantidad actualizada, se retorna el carrito"),
+            @ApiResponse(responseCode = "400", description = "Cantidad inválida (debe ser >= 1)"),
+            @ApiResponse(responseCode = "404", description = "Producto no encontrado en el carrito")
+    })
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE', 'CLIENT')")
     public ResponseEntity<CartResponseDTO> updateQuantity(Authentication authentication,
                                                           @PathVariable Long productId,
