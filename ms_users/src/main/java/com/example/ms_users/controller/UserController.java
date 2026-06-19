@@ -5,6 +5,10 @@ import com.example.ms_users.dto.response.UserResponseDTO;
 import com.example.ms_users.exception.custom.UserNotFoundException;
 import com.example.ms_users.model.User;
 import com.example.ms_users.service.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +24,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/user")
 @RequiredArgsConstructor
+@Tag(name = "Perfil de usuario", description = "Endpoints para que los usuarios gestionen su propio perfil")
 public class UserController {
 
     private final UserService userService;
@@ -28,6 +33,13 @@ public class UserController {
 
     @GetMapping("/profile")
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE', 'CLIENT')")
+    @Operation(summary = "Obtener mi perfil", description = "Retorna los datos del usuario autenticado.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Perfil obtenido"),
+            @ApiResponse(responseCode = "401", description = "No autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acceso denegado"),
+            @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
+    })
     public ResponseEntity<?> getMyProfile(Authentication authentication) {
         if (authentication == null || authentication.getName() == null) {
             log.warn("Intento de obtener perfil - Usuario no autenticado");
@@ -63,6 +75,13 @@ public class UserController {
 
     @PutMapping("/profile")
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE', 'CLIENT')")
+    @Operation(summary = "Actualizar mi perfil", description = "Modifica email, dirección o teléfono del usuario autenticado.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Perfil actualizado"),
+            @ApiResponse(responseCode = "400", description = "Datos inválidos"),
+            @ApiResponse(responseCode = "401", description = "No autenticado"),
+            @ApiResponse(responseCode = "409", description = "email ya en uso ???????????")
+    })
     public ResponseEntity<?> updateMyProfile(Authentication authentication,
                                              @Valid @RequestBody UserUpdateDTO updateDTO) {
         if (authentication == null || authentication.getName() == null) {
@@ -102,6 +121,12 @@ public class UserController {
 
     @DeleteMapping("/delete")
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE', 'CLIENT')")
+    @Operation(summary = "Eliminar mi cuenta", description = "Elimina definitivamente la cuenta del usuario autenticado.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Cuenta eliminada"),
+            @ApiResponse(responseCode = "401", description = "No autenticado"),
+            @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
+    })
     public ResponseEntity<?> deleteOwnAccount(Authentication authentication) {
         if (authentication == null || authentication.getName() == null) {
             log.warn("Intento de eliminar cuenta - Usuario no autenticado");

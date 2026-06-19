@@ -5,6 +5,12 @@ import com.example.ms_cart.dto.response.CartResponseDTO;
 import com.example.ms_cart.model.Cart;
 import com.example.ms_cart.model.CartItem;
 import com.example.ms_cart.service.CartService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -18,11 +24,27 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/v1/cart/admin")
 @RequiredArgsConstructor
+@SecurityRequirement(name = "bearerAuth")
+@Tag(
+        name = "Administración de Carritos",
+        description = "Endpoints para que administradores gestionen los carritos de usuarios"
+)
 public class CartAdminController {
 
     private final CartService cartService;
 
     @GetMapping("/user/{userId}")
+    @Operation(
+            summary = "Obtener carrito de un usuario por su ID",
+            description = "Retorna el carrito completo de cualquier usuario (solo para ADMIN)."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Carrito encontrado"),
+            @ApiResponse(responseCode = "401", description = "No autenticado"),
+            @ApiResponse(responseCode = "403", description = "No tiene permisos de ADMIN"),
+            @ApiResponse(responseCode = "404", description = "El usuario no tiene carrito (o no existe)")
+
+    })
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CartResponseDTO> getUserCart(@PathVariable Long userId) {
         log.info("ADMIN - Obteniendo carrito del usuario {}", userId);
@@ -30,19 +52,33 @@ public class CartAdminController {
         return ResponseEntity.ok(mapToResponseDTO(cart));
     }
 
+    //Tengo preguntas....
     @DeleteMapping("/user/{userId}")
+    @Operation(
+            summary = "Limpiar carrito de un usuario",
+            description = "Elimina todos los ítems del carrito de un usuario específico (solo ADMIN)."
+    )
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> clearUserCart(@PathVariable Long userId) {
         log.info("ADMIN - Limpiando carrito del usuario {}", userId);
-        Cart cart = cartService.findByUserIdOrThrow(userId);
-        cart.getItems().clear();
-        cartService.findByIdOrThrow(cart.getCartId());
+        cartService.clearCartByUserId(userId);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/exists/{userId}")
+    @Operation(
+            summary = "Verificar la existencia de un carrito",
+            description = "Indica si un usuario tiene un carrito asociado."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Respuesta con booleano 'exists'"
+            )
+    })
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Map<String, Boolean>> cartExists(@PathVariable Long userId) {
+    public ResponseEntity<Map<String, Boolean>> cartExists(@Parameter(description = "ID del usuario", example = "1001")
+            @PathVariable Long userId) {
         log.debug("ADMIN - Verificando existencia de carrito para usuario: {}", userId);
         boolean exists = cartService.cartExists(userId);
         return ResponseEntity.ok(Map.of("exists", exists));

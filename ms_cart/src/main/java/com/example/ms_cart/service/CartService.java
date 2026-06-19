@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -24,15 +25,6 @@ public class CartService {
     private final CartRepository cartRepository;
     private final ProductServiceClient productClient;
     private final UserClient userClient;
-
-    public Cart findByIdOrThrow(Long cartId) {
-        log.debug("Buscando carrito por ID: {}", cartId);
-        return cartRepository.findById(cartId)
-                .orElseThrow(() -> {
-                    log.warn("Carrito no encontrado - ID: {}", cartId);
-                    return new CartNotFoundException("Carrito no encontrado con ID: " + cartId);
-                });
-    }
 
     public Cart findByUserIdOrThrow(Long userId) {
         log.debug("Buscando carrito por usuario ID: {}", userId);
@@ -148,6 +140,14 @@ public class CartService {
         log.info("Carrito limpiado para usuario: {}", username);
     }
 
+    @Transactional
+    public void clearCartByUserId(Long userId) {
+        log.info("Limpiando carrito del usuario ID: {}", userId);
+        Cart cart = findByUserIdOrThrow(userId);
+        cart.getItems().clear();
+        cartRepository.save(cart);
+    }
+
     public Cart getUserCart(String username) {
         log.debug("Obteniendo carrito del usuario: {}", username);
         Long userId = getUserIdFromUsername(username);
@@ -187,10 +187,8 @@ public class CartService {
         return cartRepository.save(cart);
     }
 
-    // Método temporal para obtener userId desde username
+    // Metodo temporal para obtener userId desde username
     private Long getUserIdFromUsername(String username) {
-        // TODO: Llamar a ms_users para obtener el ID real
-        // Por ahora, retornamos un ID fijo para pruebas
-        return 1L;
+        return userClient.getUserIdByUsername(username);
     }
 }
