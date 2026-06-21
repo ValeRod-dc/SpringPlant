@@ -275,6 +275,18 @@ public class AdminController {
         }
     }
 
+    @GetMapping("/users/exists/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Verificar si existe un usuario por ID", description = "Retorna true/false")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Respuesta con campo 'exists'")
+    })
+    public ResponseEntity<Map<String, Boolean>> userExistsById(
+            @Parameter(description = "ID del usuario", example = "2") @PathVariable Long id) {
+        boolean exists = userService.existsById(id);  // necesitas agregar este método en UserService
+        return ResponseEntity.ok(Map.of("exists", exists));
+    }
+
     // ========== METODO UTILITARIO ==========
 
     private UserResponseDTO mapToResponseDTO(User user) {

@@ -16,7 +16,7 @@ public class ShippingResponseDTO {
     private Long shippingId;
 
     @Schema(description = "ID de la orden",
-            example = "1001")
+            example = "1")
     private Long orderId;
 
     @Schema(description = "ID del usuario",

@@ -11,7 +11,7 @@ public class CreateShippingRequest {
 
     @NotNull(message = "El orderId es obligatorio")
     @Schema(description = "ID de la orden",
-            example = "1001",
+            example = "2",
             requiredMode = Schema.RequiredMode.REQUIRED)
     private Long orderId;
 
