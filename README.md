@@ -105,4 +105,4 @@ SpringPlant/
 
 ## 👩‍💻 Autora
 
-Desarrollado por [ValeRod-dc](https://github.com/ValeRod-dc) como proyecto semestral de desarrollo full-stack.
+Desarrollado por [ValeRod-dc](https://github.com/ValeRod-dc) y cata como proyecto semestral de desarrollo full-stack.
