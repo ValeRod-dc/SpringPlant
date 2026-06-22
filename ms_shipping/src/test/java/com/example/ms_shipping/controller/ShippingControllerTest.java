@@ -27,6 +27,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(ShippingController.class)
 @AutoConfigureMockMvc(addFilters = false)
+@WithMockUser(roles = "ADMIN")
 class ShippingControllerTest {
 
     @Autowired

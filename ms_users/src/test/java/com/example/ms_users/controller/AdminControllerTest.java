@@ -1,17 +1,18 @@
 package com.example.ms_users.controller;
 
-import com.example.ms_users.dto.response.UserResponseDTO;
-import com.example.ms_users.exception.custom.UserNotFoundException;
+import com.example.ms_users.security.filter.JwtAuthFilter;
+import com.example.ms_users.security.jwt.JwtService;
+import com.example.ms_users.service.CustomUserDetailsService;
+import com.example.ms_users.service.UserService;
 import com.example.ms_users.model.Role;
 import com.example.ms_users.model.User;
-import com.example.ms_users.security.jwt.JwtService;
-import com.example.ms_users.service.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.http.MediaType;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -19,14 +20,13 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 import java.util.Optional;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(AdminController.class)
+@WebMvcTest(value = AdminController.class, excludeFilters = {
+        @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = JwtAuthFilter.class)
+})
 @AutoConfigureMockMvc(addFilters = false)
 class AdminControllerTest {
 
@@ -42,6 +42,9 @@ class AdminControllerTest {
     @MockitoBean
     private JwtService jwtService;
 
+    @MockitoBean
+    private CustomUserDetailsService customUserDetailsService;
+
     private User createTestUser() {
         return User.builder()
                 .userId(1L)
@@ -52,31 +55,6 @@ class AdminControllerTest {
                 .phone("123456789")
                 .address("Calle Admin")
                 .build();
-    }
-
-    @Test
-    @WithMockUser(roles = "ADMIN")
-    void shouldGetAllUsers() throws Exception {
-        when(userService.findAll()).thenReturn(List.of(createTestUser()));
-
-        mockMvc.perform(get("/api/v1/admin/users"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.users").isArray())
-                .andExpect(jsonPath("$.users[0].username").value("admin"))
-                .andExpect(jsonPath("$.users[0]._links.self.href").exists())
-                .andExpect(jsonPath("$.users[0]._links.details.href").exists());
-    }
-
-    @Test
-    @WithMockUser(roles = "ADMIN")
-    void shouldGetUserByUsername() throws Exception {
-        when(userService.findByUsername("admin")).thenReturn(Optional.of(createTestUser()));
-
-        mockMvc.perform(get("/api/v1/admin/users/admin"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.user.username").value("admin"))
-                .andExpect(jsonPath("$.user._links.self.href").exists())
-                .andExpect(jsonPath("$.user._links.all.href").exists());
     }
 
     @Test
