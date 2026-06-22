@@ -1,0 +1,75 @@
+services:
+  eureka-server:
+    build: ./ms_eureka
+    container_name: eureka-server
+    ports:
+      - "8761:8761"
+
+  product:
+    build: ./product
+    container_name: product
+    ports:
+      - "9000:9000"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      - eureka-server
+
+  inventory:
+    build: ./inventory
+    container_name: inventory
+    ports:
+      - "9002:9002"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      - eureka-server
+      - product
+
+  order:
+    build: ./order
+    container_name: order
+    ports:
+      - "9003:9003"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      - eureka-server
+      - product
+
+  notification:
+    build: ./notification
+    container_name: notification
+    ports:
+      - "9099:9099"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      - eureka-server
+
+  review:
+    build: ./review
+    container_name: review
+    ports:
+      - "9097:9097"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      - eureka-server
+      - product
+      - order
+
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    ports:
+      - "9093:9093"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      - eureka-server
+      - product
+      - inventory
+      - order
+      - notification
+      - review
