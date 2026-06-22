@@ -3,13 +3,17 @@ package com.example.ms_cart.dto.response;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import org.springframework.hateoas.RepresentationModel;
+
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
 @Builder
+@EqualsAndHashCode(callSuper = false)
 @Schema(description = "Respuesta con el carrito completo")
-public class CartResponseDTO {
+public class CartResponseDTO extends RepresentationModel<CartResponseDTO> {
 
     @Schema(description = "ID interno del carrito", example = "1", accessMode = Schema.AccessMode.READ_ONLY)
     private Long cartId;

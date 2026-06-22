@@ -23,6 +23,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
+
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/shipping")
@@ -33,11 +35,9 @@ public class ShippingController {
 
     private final ShippingService shippingService;
 
-    @Operation(
-            summary = "Crear un nuevo envío",
-            description = "Permite crear un envío asociado a una orden que debe estar en estado 'PAID'. " +
-                    "El usuario autenticado debe existir en el sistema. Solo se permite un envío por orden."
-    )
+    @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE', 'CLIENT')")
+    @Operation(summary = "Crear un nuevo envío")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Envío creado exitosamente",
                     content = @Content(schema = @Schema(implementation = ShippingResponseDTO.class))),
@@ -45,88 +45,104 @@ public class ShippingController {
             @ApiResponse(responseCode = "404", description = "Usuario u orden no encontrada"),
             @ApiResponse(responseCode = "409", description = "Ya existe un envío para esta orden")
     })
-    @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE', 'CLIENT')")
     public ResponseEntity<ShippingResponseDTO> createShipping(
             Authentication authentication,
             @Valid @RequestBody CreateShippingRequest request) {
+
         String username = authentication.getName();
         log.info("Solicitud de creación de envío - Usuario: {}, Orden: {}", username, request.getOrderId());
         ShippingResponseDTO created = shippingService.createShipping(username, request);
+
+        // Agregar enlaces HATEOAS
+        created.add(linkTo(methodOn(ShippingController.class).getById(created.getShippingId())).withSelfRel());
+        created.add(linkTo(methodOn(ShippingController.class).getMyShippings(authentication)).withRel("mis-envios"));
+        created.add(linkTo(methodOn(ShippingController.class).updateStatus(created.getShippingId(), null)).withRel("update-status"));
+
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
-    @Operation(
-            summary = "Obtener un envío por su ID",
-            description = "Devuelve los detalles de un envío específico. Requiere autenticación."
-    )
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE', 'CLIENT')")
+    @Operation(summary = "Obtener un envío por su ID")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Envío encontrado",
                     content = @Content(schema = @Schema(implementation = ShippingResponseDTO.class))),
             @ApiResponse(responseCode = "404", description = "Envío no encontrado")
     })
-    @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE', 'CLIENT')")
     public ResponseEntity<ShippingResponseDTO> getById(
             @Parameter(description = "ID del envío", example = "1", required = true)
             @PathVariable Long id) {
 
         log.info("Consultando envío con id: {}", id);
-        return ResponseEntity.ok(shippingService.getShipping(id));
+        ShippingResponseDTO shipping = shippingService.getShipping(id);
+
+        // Agregar enlaces HATEOAS
+        shipping.add(linkTo(methodOn(ShippingController.class).getById(id)).withSelfRel());
+        shipping.add(linkTo(methodOn(ShippingController.class).getMyShippings(null)).withRel("mis-envios"));
+        shipping.add(linkTo(methodOn(ShippingController.class).updateStatus(id, null)).withRel("update-status"));
+
+        // Enlace a la orden asociada (si tienes un endpoint en ms-orders)
+        // shipping.add(linkTo(OrderController.class).slash(shipping.getOrderId()).withRel("orden"));
+
+        return ResponseEntity.ok(shipping);
     }
 
-    @Operation(
-            summary = "Listar envíos por ID de orden",
-            description = "Retorna todos los envíos asociados a una orden específica."
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Lista de envíos (puede estar vacía)",
-                    content = @Content(schema = @Schema(implementation = ShippingResponseDTO.class))),
-            @ApiResponse(responseCode = "404", description = "Orden no encontrada (si el servicio de órdenes responde)")
-    })
     @GetMapping("/order/{orderId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE', 'CLIENT')")
+    @Operation(summary = "Listar envíos por ID de orden")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Lista de envíos (puede estar vacía)",
+                    content = @Content(schema = @Schema(implementation = ShippingResponseDTO.class)))
+    })
     public ResponseEntity<List<ShippingResponseDTO>> getByOrder(
-            @Parameter(description = "ID de la orden", example = "2", required = true)
+            @Parameter(description = "ID de la orden", example = "1001", required = true)
             @PathVariable Long orderId) {
 
         log.info("Consultando envíos por orderId: {}", orderId);
-        return ResponseEntity.ok(shippingService.getByOrder(orderId));
+        List<ShippingResponseDTO> shippings = shippingService.getByOrder(orderId);
+
+        // Agregar enlaces a cada elemento
+        shippings.forEach(shipping -> {
+            shipping.add(linkTo(methodOn(ShippingController.class).getById(shipping.getShippingId())).withSelfRel());
+            shipping.add(linkTo(methodOn(ShippingController.class).getMyShippings(null)).withRel("mis-envios"));
+        });
+
+        return ResponseEntity.ok(shippings);
     }
 
-    @Operation(
-            summary = "Obtener mis envíos (usuario autenticado)",
-            description = "Devuelve todos los envíos del usuario actualmente autenticado. " +
-                    "Actualmente usa un userId fijo (1) hasta que se integre con el servicio de usuarios."
-    )
+    @GetMapping("/my-shippings")
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE', 'CLIENT')")
+    @Operation(summary = "Obtener mis envíos (usuario autenticado)")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Lista de envíos del usuario",
                     content = @Content(schema = @Schema(implementation = ShippingResponseDTO.class)))
     })
-    @GetMapping("/my-shippings")
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE', 'CLIENT')")
     public ResponseEntity<List<ShippingResponseDTO>> getMyShippings(Authentication authentication) {
-        String username = authentication.getName();
+
+        String username = authentication != null ? authentication.getName() : "anonimo";
         log.info("Consultando envíos del usuario: {}", username);
         // TODO: Obtener userId real desde ms_users
         Long userId = 1L;
-        return ResponseEntity.ok(shippingService.getByUser(userId));
+        List<ShippingResponseDTO> shippings = shippingService.getByUser(userId);
+
+        // Agregar enlaces
+        shippings.forEach(shipping -> {
+            shipping.add(linkTo(methodOn(ShippingController.class).getById(shipping.getShippingId())).withSelfRel());
+            shipping.add(linkTo(methodOn(ShippingController.class).updateStatus(shipping.getShippingId(), null)).withRel("update-status"));
+        });
+
+        return ResponseEntity.ok(shippings);
     }
 
-    @Operation(
-            summary = "Actualizar el estado de un envío",
-            description = "Permite a administradores y empleados cambiar el estado de un envío. " +
-                    "Cuando se cambia a 'SHIPPED' se asigna fecha de envío y estimación; " +
-                    "cuando a 'DELIVERED' se registra la fecha de entrega."
-    )
+    @PutMapping("/{id}/status")
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
+    @Operation(summary = "Actualizar el estado de un envío")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Estado actualizado correctamente",
                     content = @Content(schema = @Schema(implementation = ShippingResponseDTO.class))),
             @ApiResponse(responseCode = "400", description = "Estado inválido o transición no permitida"),
             @ApiResponse(responseCode = "404", description = "Envío no encontrado")
     })
-    @PutMapping("/{id}/status")
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
     public ResponseEntity<ShippingResponseDTO> updateStatus(
             @Parameter(description = "ID del envío", example = "1", required = true)
             @PathVariable Long id,
@@ -136,6 +152,11 @@ public class ShippingController {
 
         log.info("Actualizando estado del envío {} a {}", id, status);
         ShippingResponseDTO updated = shippingService.updateStatus(id, status);
+
+        // Agregar enlaces
+        updated.add(linkTo(methodOn(ShippingController.class).getById(id)).withSelfRel());
+        updated.add(linkTo(methodOn(ShippingController.class).getMyShippings(null)).withRel("mis-envios"));
+
         return ResponseEntity.ok(updated);
     }
 }

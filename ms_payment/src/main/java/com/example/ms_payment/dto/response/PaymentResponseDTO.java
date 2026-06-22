@@ -5,13 +5,16 @@ import com.example.ms_payment.model.PaymentStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import org.springframework.hateoas.RepresentationModel;
 
 import java.time.LocalDateTime;
 
 @Data
 @Builder
+@EqualsAndHashCode(callSuper = false)
 @Schema(description = "Respuesta con datos de un pago")
-public class PaymentResponseDTO {
+public class PaymentResponseDTO extends RepresentationModel<PaymentResponseDTO> {
 
     @Schema(description = "ID del pago", example = "1", accessMode = Schema.AccessMode.READ_ONLY)
     private Long paymentId;

@@ -17,6 +17,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
+
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
 
 @Slf4j
 @RestController
@@ -42,6 +45,7 @@ public class PaymentController {
         String username = authentication.getName();
         log.info("Solicitud de pago - Usuario: {}, OrderId: {}", username, request.getOrderId());
         PaymentResponseDTO response = paymentService.processPayment(username, request);
+        addPaymentLinks(response, response.getPaymentId());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -56,6 +60,7 @@ public class PaymentController {
     public ResponseEntity<PaymentResponseDTO> getPaymentById(@PathVariable Long paymentId) {
         log.info("Consultando pago con id: {}", paymentId);
         PaymentResponseDTO response = paymentService.getPaymentById(paymentId);
+        addPaymentLinks(response, paymentId);
         return ResponseEntity.ok(response);
     }
 
@@ -69,6 +74,16 @@ public class PaymentController {
     public ResponseEntity<List<PaymentResponseDTO>> getPaymentsByOrder(@PathVariable Long orderId) {
         log.info("Consultando pagos para orden: {}", orderId);
         List<PaymentResponseDTO> response = paymentService.getPaymentsByOrder(orderId);
+        response.forEach(dto -> addPaymentLinks(dto, dto.getPaymentId()));
         return ResponseEntity.ok(response);
+    }
+
+    private void addPaymentLinks(PaymentResponseDTO dto, Long paymentId) {
+        if (dto != null) {
+            dto.add(linkTo(methodOn(PaymentController.class).getPaymentById(paymentId)).withSelfRel());
+            dto.add(linkTo(methodOn(PaymentController.class).getPaymentsByOrder(dto.getOrderId())).withRel("order-payments"));
+            dto.add(linkTo(methodOn(PaymentAdminController.class).getUserPayments(dto.getUserId())).withRel("user-payments"));
+            dto.add(linkTo(methodOn(PaymentAdminController.class).paymentExistsByOrder(dto.getOrderId())).withRel("exists"));
+        }
     }
 }

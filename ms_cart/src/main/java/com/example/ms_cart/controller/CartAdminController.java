@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.hateoas.Link;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -20,13 +21,17 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
+
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/cart/admin")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "bearerAuth")
-@Tag(   name = "Administración de Carritos",
-        description = "Endpoints para que administradores gestionen los carritos de usuarios")
+@Tag(
+        name = "Administración de Carritos",
+        description = "Endpoints para que administradores gestionen los carritos de usuarios"
+)
 public class CartAdminController {
 
     private final CartService cartService;
@@ -41,13 +46,14 @@ public class CartAdminController {
             @ApiResponse(responseCode = "401", description = "No autenticado"),
             @ApiResponse(responseCode = "403", description = "No tiene permisos de ADMIN"),
             @ApiResponse(responseCode = "404", description = "El usuario no tiene carrito (o no existe)")
-
     })
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CartResponseDTO> getUserCart(@PathVariable Long userId) {
         log.info("ADMIN - Obteniendo carrito del usuario {}", userId);
         Cart cart = cartService.findByUserIdOrThrow(userId);
-        return ResponseEntity.ok(mapToResponseDTO(cart));
+        CartResponseDTO response = mapToResponseDTO(cart);
+        addHateoasLinksAdmin(response, userId);
+        return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/user/{userId}")
@@ -81,10 +87,32 @@ public class CartAdminController {
     })
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Boolean>> cartExists(@Parameter(description = "ID del usuario", example = "1001")
-            @PathVariable Long userId) {
+                                                           @PathVariable Long userId) {
         log.debug("ADMIN - Verificando existencia de carrito para usuario: {}", userId);
         boolean exists = cartService.cartExists(userId);
         return ResponseEntity.ok(Map.of("exists", exists));
+    }
+
+    private void addHateoasLinksAdmin(CartResponseDTO response, Long userId) {
+        // Self link
+        Link selfLink = linkTo(methodOn(CartAdminController.class).getUserCart(userId))
+                .withSelfRel();
+        response.add(selfLink);
+
+        // Link para limpiar carrito (admin)
+        Link clearLink = linkTo(methodOn(CartAdminController.class).clearUserCart(userId))
+                .withRel("admin-clear");
+        response.add(clearLink);
+
+        // Link para verificar existencia
+        Link existsLink = linkTo(methodOn(CartAdminController.class).cartExists(userId))
+                .withRel("admin-exists");
+        response.add(existsLink);
+
+        // Link al carrito del usuario (ruta normal)
+        Link userCartLink = linkTo(methodOn(CartController.class).getMyCart(null))
+                .withRel("user-cart");
+        response.add(userCartLink);
     }
 
     private CartResponseDTO mapToResponseDTO(Cart cart) {

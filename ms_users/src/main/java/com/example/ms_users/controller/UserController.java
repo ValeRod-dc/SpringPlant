@@ -20,6 +20,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
+
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/user")
@@ -54,14 +56,8 @@ public class UserController {
             User user = userService.findByUsername(username)
                     .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado: " + username));
 
-            UserResponseDTO profile = UserResponseDTO.builder()
-                    .userId(user.getUserId())
-                    .username(user.getUsername())
-                    .email(user.getEmail())
-                    .role(user.getRole().name())
-                    .phone(user.getPhone())
-                    .createdAt(user.getCreatedAt())
-                    .build();
+            UserResponseDTO profile = mapToResponseDTO(user);
+            addUserLinks(profile, username);
 
             log.debug("Perfil obtenido exitosamente - Usuario: {}", username);
             return ResponseEntity.ok(Map.of("user", profile));
@@ -80,7 +76,7 @@ public class UserController {
             @ApiResponse(responseCode = "200", description = "Perfil actualizado"),
             @ApiResponse(responseCode = "400", description = "Datos inválidos"),
             @ApiResponse(responseCode = "401", description = "No autenticado"),
-            @ApiResponse(responseCode = "409", description = "email ya en uso ???????????")
+            @ApiResponse(responseCode = "409", description = "email ya en uso")
     })
     public ResponseEntity<?> updateMyProfile(Authentication authentication,
                                              @Valid @RequestBody UserUpdateDTO updateDTO) {
@@ -96,15 +92,8 @@ public class UserController {
 
         try {
             User updatedUser = userService.updateUserProfile(username, updateDTO);
-
-            UserResponseDTO response = UserResponseDTO.builder()
-                    .userId(updatedUser.getUserId())
-                    .username(updatedUser.getUsername())
-                    .email(updatedUser.getEmail())
-                    .role(updatedUser.getRole().name())
-                    .phone(updatedUser.getPhone())
-                    .createdAt(updatedUser.getCreatedAt())
-                    .build();
+            UserResponseDTO response = mapToResponseDTO(updatedUser);
+            addUserLinks(response, username);
 
             log.info("Perfil actualizado exitosamente - Usuario: {}", username);
             return ResponseEntity.ok(Map.of(
@@ -150,5 +139,26 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("error", e.getMessage()));
         }
+    }
+
+    // ========== METODOS UTILITARIOS ==========
+
+    private UserResponseDTO mapToResponseDTO(User user) {
+        return UserResponseDTO.builder()
+                .userId(user.getUserId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .role(user.getRole().name())
+                .phone(user.getPhone())
+                .createdAt(user.getCreatedAt())
+                .build();
+    }
+
+    private void addUserLinks(UserResponseDTO dto, String username) {
+        dto.add(linkTo(methodOn(UserController.class).getMyProfile(null)).withSelfRel());
+        dto.add(linkTo(methodOn(UserController.class).updateMyProfile(null, null)).withRel("update"));
+        dto.add(linkTo(methodOn(UserController.class).deleteOwnAccount(null)).withRel("delete"));
+        dto.add(linkTo(methodOn(AuthController.class).getMyProfile(null)).withRel("auth-profile"));
+        dto.add(linkTo(methodOn(AdminController.class).getUserByUsername(username)).withRel("admin-details"));
     }
 }
