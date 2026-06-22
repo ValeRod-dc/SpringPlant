@@ -31,6 +31,10 @@ public class UserService {
     private PasswordEncoder passwordEncoder;
 
     // ========== VALIDACIONES DE EXISTENCIA ==========
+    public boolean existsById(Long id) {
+        log.debug("Verificando existencia de usuario por ID: {}", id);
+        return repository.existsById(id);
+    }
 
     public boolean existsByUsername(String username) {
         log.debug("Verificando existencia de username: {}", username);

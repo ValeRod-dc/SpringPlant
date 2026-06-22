@@ -4,6 +4,8 @@ services:
     container_name: eureka-server
     ports:
       - "8761:8761"
+    networks:
+      - microservices-network
 
   product:
     build: ./product
@@ -14,6 +16,8 @@ services:
       SPRING_PROFILES_ACTIVE: docker
     depends_on:
       - eureka-server
+    networks:
+      - microservices-network
 
   inventory:
     build: ./inventory
@@ -25,6 +29,8 @@ services:
     depends_on:
       - eureka-server
       - product
+    networks:
+      - microservices-network
 
   order:
     build: ./order
@@ -36,6 +42,8 @@ services:
     depends_on:
       - eureka-server
       - product
+    networks:
+      - microservices-network
 
   notification:
     build: ./notification
@@ -46,6 +54,8 @@ services:
       SPRING_PROFILES_ACTIVE: docker
     depends_on:
       - eureka-server
+    networks:
+      - microservices-network
 
   review:
     build: ./review
@@ -58,6 +68,68 @@ services:
       - eureka-server
       - product
       - order
+    networks:
+      - microservices-network
+
+  ms-users:
+    build: ./ms_users
+    container_name: ms-users
+    ports:
+      - "9090:9090"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      - eureka-server
+    networks:
+      - microservices-network
+
+  ms-cart:
+    build: ./ms_cart
+    container_name: ms-cart
+    ports:
+      - "9092:9092"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      - eureka-server
+    networks:
+      - microservices-network
+
+  ms-payment:
+    build: ./ms_payment
+    container_name: ms-payment
+    ports:
+      - "9094:9094"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      - eureka-server
+    networks:
+      - microservices-network
+
+  ms-shipping:
+    build: ./ms_shipping
+    container_name: ms-shipping
+    ports:
+      - "9096:9096"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      - eureka-server
+    networks:
+      - microservices-network
+
+  ms-discount:
+    build: ./ms_discount
+    container_name: ms-discount
+    ports:
+      - "9098:9098"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      - eureka-server
+    networks:
+      - microservices-network
 
   api-gateway:
     build: ./api-gateway
@@ -73,3 +145,14 @@ services:
       - order
       - notification
       - review
+      - ms-users
+      - ms-cart
+      - ms-payment
+      - ms-shipping
+      - ms-discount
+    networks:
+      - microservices-network
+
+networks:
+  microservices-network:
+    driver: bridge

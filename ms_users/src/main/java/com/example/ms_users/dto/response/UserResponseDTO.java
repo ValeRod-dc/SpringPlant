@@ -3,12 +3,16 @@ package com.example.ms_users.dto.response;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import org.springframework.hateoas.RepresentationModel;
+
 import java.time.LocalDateTime;
 
 @Data
 @Builder
+@EqualsAndHashCode(callSuper = false)
 @Schema(description = "Respuesta con datos de usuario")
-public class UserResponseDTO {
+public class UserResponseDTO extends RepresentationModel<UserResponseDTO> {
 
     @Schema(description = "ID del usuario", example = "1", accessMode = Schema.AccessMode.READ_ONLY)
     private Long userId;

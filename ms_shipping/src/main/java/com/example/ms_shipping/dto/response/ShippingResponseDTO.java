@@ -4,19 +4,23 @@ import com.example.ms_shipping.model.ShippingStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import org.springframework.hateoas.RepresentationModel;
+
 import java.time.LocalDateTime;
 
 @Data
 @Builder
+@EqualsAndHashCode(callSuper = false) //para evitar problemas con lombok y herencia
 @Schema(description = "Respuesta con datos de un envío")
-public class ShippingResponseDTO {
+public class ShippingResponseDTO extends RepresentationModel<ShippingResponseDTO> {
 
     @Schema(description = "ID del envío",
             accessMode = Schema.AccessMode.READ_ONLY)
     private Long shippingId;
 
     @Schema(description = "ID de la orden",
-            example = "1001")
+            example = "1")
     private Long orderId;
 
     @Schema(description = "ID del usuario",

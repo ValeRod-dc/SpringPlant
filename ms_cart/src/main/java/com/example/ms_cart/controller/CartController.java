@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.hateoas.Link;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -21,6 +22,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.stream.Collectors;
+
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
 
 @Slf4j
 @RestController
@@ -51,7 +54,9 @@ public class CartController {
         String username = authentication.getName();
         log.info("Obteniendo carrito del usuario: {}", username);
         Cart cart = cartService.getUserCart(username);
-        return ResponseEntity.ok(mapToResponseDTO(cart));
+        CartResponseDTO response = mapToResponseDTO(cart);
+        addHateoasLinks(response, cart.getUserId());
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/items")
@@ -73,7 +78,9 @@ public class CartController {
         String username = authentication.getName();
         log.info("Agregando item al carrito del usuario: {}, producto: {}", username, request.getProductId());
         Cart updatedCart = cartService.addItem(username, request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(mapToResponseDTO(updatedCart));
+        CartResponseDTO response = mapToResponseDTO(updatedCart);
+        addHateoasLinks(response, updatedCart.getUserId());
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @DeleteMapping("/items/{productId}")
@@ -92,7 +99,9 @@ public class CartController {
         String username = authentication.getName();
         log.info("Eliminando producto {} del carrito de {}", productId, username);
         Cart updatedCart = cartService.removeItem(username, productId);
-        return ResponseEntity.ok(mapToResponseDTO(updatedCart));
+        CartResponseDTO response = mapToResponseDTO(updatedCart);
+        addHateoasLinks(response, updatedCart.getUserId());
+        return ResponseEntity.ok(response);
     }
 
     @DeleteMapping
@@ -129,7 +138,35 @@ public class CartController {
         String username = authentication.getName();
         log.info("Actualizando cantidad del producto {} a {} para usuario {}", productId, quantity, username);
         Cart updatedCart = cartService.updateItemQuantity(username, productId, quantity);
-        return ResponseEntity.ok(mapToResponseDTO(updatedCart));
+        CartResponseDTO response = mapToResponseDTO(updatedCart);
+        addHateoasLinks(response, updatedCart.getUserId());
+        return ResponseEntity.ok(response);
+    }
+
+    private void addHateoasLinks(CartResponseDTO response, Long userId) {
+        // Self link
+        Link selfLink = linkTo(methodOn(CartController.class).getMyCart(null)).withSelfRel();
+        response.add(selfLink);
+
+        // Link para agregar item
+        Link addItemLink = linkTo(methodOn(CartController.class).addItem(null, null))
+                .withRel("add-item");
+        response.add(addItemLink);
+
+        // Link para limpiar carrito
+        Link clearLink = linkTo(methodOn(CartController.class).clearCart(null))
+                .withRel("clear");
+        response.add(clearLink);
+
+        // Link para obtener carrito por admin (si es ADMIN)
+        try {
+            Link adminLink = linkTo(methodOn(CartAdminController.class).getUserCart(userId))
+                    .withRel("admin-view");
+            response.add(adminLink);
+        } catch (Exception e) {
+            // Si el endpoint admin no está disponible, no agregar el link
+            log.debug("No se pudo generar link admin-view para userId: {}", userId);
+        }
     }
 
     private CartResponseDTO mapToResponseDTO(Cart cart) {

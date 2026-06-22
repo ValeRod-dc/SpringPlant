@@ -17,6 +17,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
+
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/discounts/admin")
@@ -31,12 +33,12 @@ public class DiscountControllerAdmin {
     @Operation(summary = "Crear cupón", description = "Crea un nuevo cupón de descuento general.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Cupón creado"),
-            @ApiResponse(responseCode = "400", description = "Datos inválidos"),
-            @ApiResponse(responseCode = "403", description = "Acceso denegado")
+            @ApiResponse(responseCode = "400", description = "Datos inválidos")
     })
     public ResponseEntity<DiscountResponseDTO> createCoupon(@Valid @RequestBody CreateCouponRequest request) {
         log.info("ADMIN - Creando cupón: {}", request.getCode());
         DiscountResponseDTO created = discountService.createCoupon(request);
+        addAdminLinks(created, created.getDiscountId());
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
@@ -45,13 +47,13 @@ public class DiscountControllerAdmin {
     @Operation(summary = "Crear cupón para un usuario", description = "Crea un cupón de descuento exclusivo para un usuario específico.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Cupón creado"),
-            @ApiResponse(responseCode = "400", description = "Datos inválidos"),
-            @ApiResponse(responseCode = "403", description = "Acceso denegado")
+            @ApiResponse(responseCode = "400", description = "Datos inválidos")
     })
     public ResponseEntity<DiscountResponseDTO> createCouponForUser(@PathVariable String username,
                                                                    @Valid @RequestBody CreateCouponRequest request) {
         log.info("ADMIN - Creando cupón para usuario: {} con código: {}", username, request.getCode());
         DiscountResponseDTO created = discountService.createCouponForUser(username, request);
+        addAdminLinks(created, created.getDiscountId());
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
@@ -59,9 +61,7 @@ public class DiscountControllerAdmin {
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Desactivar cupón", description = "Desactiva un cupón existente por su ID.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "Cupón desactivado"),
-            @ApiResponse(responseCode = "403", description = "Acceso denegado"),
-            @ApiResponse(responseCode = "404", description = "Cupón no encontrado")
+            @ApiResponse(responseCode = "204", description = "Cupón desactivado")
     })
     public ResponseEntity<Void> deactivate(@PathVariable Long id) {
         log.info("ADMIN - Desactivando cupón con id: {}", id);
@@ -73,19 +73,19 @@ public class DiscountControllerAdmin {
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Activar cupón", description = "Reactiva un cupón previamente desactivado.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Cupón activado"),
-            @ApiResponse(responseCode = "403", description = "Acceso denegado"),
-            @ApiResponse(responseCode = "404", description = "Cupón no encontrado")
+            @ApiResponse(responseCode = "200", description = "Cupón activado")
     })
     public ResponseEntity<DiscountResponseDTO> activate(@PathVariable Long id) {
         log.info("ADMIN - Activando cupón con id: {}", id);
         discountService.activateCoupon(id);
         DiscountResponseDTO coupon = discountService.getCouponByCode(
                 discountService.findByIdOrThrow(id).getCode());
+        addAdminLinks(coupon, id);
         return ResponseEntity.ok(coupon);
     }
 
     @GetMapping("/exists/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Verificar existencia de cupón por ID", description = "Indica si existe un cupón con el ID dado. Uso interno entre microservicios.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Resultado de la verificación")
@@ -94,5 +94,12 @@ public class DiscountControllerAdmin {
         log.debug("Verificando existencia de cupón por ID: {}", id);
         boolean exists = discountService.existsById(id);
         return ResponseEntity.ok(Map.of("exists", exists));
+    }
+
+    private void addAdminLinks(DiscountResponseDTO response, Long id) {
+        response.add(linkTo(methodOn(DiscountControllerAdmin.class).activate(id)).withRel("activate"));
+        response.add(linkTo(methodOn(DiscountControllerAdmin.class).deactivate(id)).withRel("deactivate"));
+        response.add(linkTo(methodOn(DiscountControllerEmployee.class).getByCode(response.getCode())).withRel("details"));
+        response.add(linkTo(methodOn(DiscountControllerEmployee.class).listAll()).withRel("all"));
     }
 }

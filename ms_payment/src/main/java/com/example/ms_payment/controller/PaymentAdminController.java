@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
+
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/payments/admin")
@@ -33,6 +35,11 @@ public class PaymentAdminController {
     public ResponseEntity<List<PaymentResponseDTO>> getUserPayments(@PathVariable Long userId) {
         log.info("ADMIN - Consultando pagos del usuario: {}", userId);
         List<PaymentResponseDTO> payments = paymentService.getPaymentsByUser(userId);
+        payments.forEach(dto -> {
+            dto.add(linkTo(methodOn(PaymentAdminController.class).getUserPayments(userId)).withSelfRel());
+            dto.add(linkTo(methodOn(PaymentController.class).getPaymentById(dto.getPaymentId())).withRel("details"));
+            dto.add(linkTo(methodOn(PaymentAdminController.class).paymentExistsByOrder(dto.getOrderId())).withRel("exists"));
+        });
         return ResponseEntity.ok(payments);
     }
 

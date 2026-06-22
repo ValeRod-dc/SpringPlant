@@ -33,7 +33,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
 
         // Rutas públicas
-        if (path.startsWith("/api/v1/auth/") || path.startsWith("/h2-console/")) {
+        if (path.startsWith("/api/v1/auth/login") ||
+                path.startsWith("/api/v1/auth/register") ||
+                path.startsWith("/api/v1/auth/validate") ||
+                path.startsWith("/api/v1/auth/user-exists") ||
+                path.startsWith("/h2-console/")) {
             filterChain.doFilter(request, response);
             return;
         }

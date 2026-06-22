@@ -53,6 +53,12 @@ public class AdminController {
                 .map(this::mapToResponseDTO)
                 .collect(Collectors.toList());
 
+        // Añadir enlaces a cada DTO
+        userResponses.forEach(dto -> {
+            dto.add(linkTo(methodOn(AdminController.class).getUserByUsername(dto.getUsername())).withSelfRel());
+            dto.add(linkTo(methodOn(AdminController.class).findById(dto.getUserId())).withRel("details"));
+        });
+
         log.debug("ADMIN - Total de usuarios encontrados: {}", userResponses.size());
         return ResponseEntity.ok(Map.of(
                 "users", userResponses,
@@ -76,6 +82,8 @@ public class AdminController {
                     .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado: " + username));
 
             UserResponseDTO response = mapToResponseDTO(user);
+            addAdminLinks(response, user.getUserId(), username);
+
             log.debug("ADMIN - Usuario encontrado: {}", username);
             return ResponseEntity.ok(Map.of("user", response));
 
@@ -107,6 +115,8 @@ public class AdminController {
                     .map(this::mapToResponseDTO)
                     .collect(Collectors.toList());
 
+            userResponses.forEach(dto -> dto.add(linkTo(methodOn(AdminController.class).getUserByUsername(dto.getUsername())).withSelfRel()));
+
             log.debug("ADMIN - Usuarios con rol {} encontrados: {}", role, userResponses.size());
             return ResponseEntity.ok(Map.of(
                     "role", role,
@@ -121,23 +131,22 @@ public class AdminController {
         }
     }
 
-    @GetMapping("{id}")
-    @Operation(summary = "Obtener usuario por ID (con enlaces HATEOAS)", description = "Retorna el usuario con enlaces HAL.????????")
+    @GetMapping("/{id}")
+    @Operation(summary = "Obtener usuario por ID (con enlaces HATEOAS)", description = "Retorna el usuario con enlaces HAL.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Usuario encontrado"),
             @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
     })
-    public ResponseEntity<User> findById(@Parameter(description = "ID del usuario", example = "1")
-                                         @PathVariable Long id) {
+    public ResponseEntity<UserResponseDTO> findById(@Parameter(description = "ID del usuario", example = "1")
+                                                    @PathVariable Long id) {
         Optional<User> userOpt = userService.findById(id);
-        if(!userOpt.isPresent()) {
+        if (!userOpt.isPresent()) {
             return ResponseEntity.notFound().build();
         }
         User user = userOpt.get();
-        //user.add(linkTo(methodOn(AdminController.class).findAll()).withRel("todos"));
-        user.add(linkTo(methodOn(AdminController.class)
-                .findById(user.getUserId())).withSelfRel());
-        return ResponseEntity.ok(user);
+        UserResponseDTO response = mapToResponseDTO(user);
+        addAdminLinks(response, id, user.getUsername());
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/users/{username}")
@@ -156,6 +165,7 @@ public class AdminController {
         try {
             User updatedUser = userService.updateUserProfile(username, updateDTO);
             UserResponseDTO response = mapToResponseDTO(updatedUser);
+            addAdminLinks(response, updatedUser.getUserId(), username);
 
             log.info("ADMIN - Usuario actualizado exitosamente: {}", username);
             return ResponseEntity.ok(Map.of(
@@ -231,6 +241,7 @@ public class AdminController {
             user.setRole(role);
             User updatedUser = userService.save(user);
             UserResponseDTO response = mapToResponseDTO(updatedUser);
+            addAdminLinks(response, updatedUser.getUserId(), username);
 
             log.info("ADMIN - Rol actualizado exitosamente para: {} -> {}", username, newRole);
             return ResponseEntity.ok(Map.of(
@@ -265,6 +276,8 @@ public class AdminController {
                     .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado con email: " + email));
 
             UserResponseDTO response = mapToResponseDTO(user);
+            addAdminLinks(response, user.getUserId(), user.getUsername());
+
             log.debug("ADMIN - Usuario encontrado por email: {}", email);
             return ResponseEntity.ok(Map.of("user", response));
 
@@ -275,7 +288,19 @@ public class AdminController {
         }
     }
 
-    // ========== METODO UTILITARIO ==========
+    @GetMapping("/users/exists/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Verificar si existe un usuario por ID", description = "Retorna true/false")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Respuesta con campo 'exists'")
+    })
+    public ResponseEntity<Map<String, Boolean>> userExistsById(
+            @Parameter(description = "ID del usuario", example = "2") @PathVariable Long id) {
+        boolean exists = userService.existsById(id);
+        return ResponseEntity.ok(Map.of("exists", exists));
+    }
+
+    // ========== METODOS UTILITARIOS ==========
 
     private UserResponseDTO mapToResponseDTO(User user) {
         return UserResponseDTO.builder()
@@ -287,5 +312,14 @@ public class AdminController {
                 .phone(user.getPhone())
                 .createdAt(user.getCreatedAt())
                 .build();
+    }
+
+    private void addAdminLinks(UserResponseDTO dto, Long userId, String username) {
+        dto.add(linkTo(methodOn(AdminController.class).findById(userId)).withSelfRel());
+        dto.add(linkTo(methodOn(AdminController.class).getUserByUsername(username)).withRel("by-username"));
+        dto.add(linkTo(methodOn(AdminController.class).getAllUsers()).withRel("all"));
+        dto.add(linkTo(methodOn(AdminController.class).updateUserByAdmin(username, null)).withRel("update"));
+        dto.add(linkTo(methodOn(AdminController.class).deleteUserByUsername(username)).withRel("delete"));
+        dto.add(linkTo(methodOn(AdminController.class).changeUserRole(username, null)).withRel("change-role"));
     }
 }

@@ -30,6 +30,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
+
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -44,10 +46,7 @@ public class AuthController {
     // ========== ENDPOINTS PÚBLICOS ==========
 
     @PostMapping("/register")
-    @Operation(
-            summary = "Registrar nuevo usuario",
-            description = "Crea un nueva cuenta de usuario con rol, email y teléfono."
-    )
+    @Operation(summary = "Registrar nuevo usuario", description = "Crea un nueva cuenta de usuario con rol, email y teléfono.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Usuario registrado con exito"),
             @ApiResponse(responseCode = "400", description = "Datos inválidos"),
@@ -56,22 +55,18 @@ public class AuthController {
     public ResponseEntity<?> register(@Valid @RequestBody UserRequestDTO userRequest) {
         log.info("Intentando registrar usuario: {}", userRequest.getUsername());
 
-        // Validar rol (solo ADMIN, EMPLOYEE o CLIENT)
         String roleStr = userRequest.getRole() != null ? userRequest.getRole().toUpperCase() : "CLIENT";
 
-        // Validar que el rol sea permitido
         if (!roleStr.equals("ADMIN") && !roleStr.equals("EMPLOYEE") && !roleStr.equals("CLIENT")) {
             log.warn("Registro fallido - Rol inválido: {} para usuario: {}", roleStr, userRequest.getUsername());
             throw new InvalidRoleException("Rol inválido. Use: ADMIN, EMPLOYEE o CLIENT");
         }
 
-        // Verificar si el username ya existe
         if (userService.existsByUsername(userRequest.getUsername())) {
             log.warn("Registro fallido - Username ya existe: {}", userRequest.getUsername());
             throw new UsernameAlreadyExistsException("El username '" + userRequest.getUsername() + "' ya está en uso");
         }
 
-        // Verificar si el email ya existe
         if (userService.existsByEmail(userRequest.getEmail())) {
             log.warn("Registro fallido - Email ya existe: {}", userRequest.getEmail());
             throw new EmailAlreadyExistsException("El email '" + userRequest.getEmail() + "' ya está registrado");
@@ -93,14 +88,8 @@ public class AuthController {
                 userRequest.getAddress()
         );
 
-        UserResponseDTO response = UserResponseDTO.builder()
-                .userId(user.getUserId())
-                .username(user.getUsername())
-                .email(user.getEmail())
-                .role(user.getRole().name())
-                .phone(user.getPhone())
-                .createdAt(user.getCreatedAt())
-                .build();
+        UserResponseDTO response = mapToResponseDTO(user);
+        addAuthLinks(response, user.getUsername());
 
         log.info("Usuario registrado con éxito: {} (rol: {})", user.getUsername(), user.getRole().name());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -195,14 +184,8 @@ public class AuthController {
         User user = userService.findByUsername(username)
                 .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado: " + username));
 
-        UserResponseDTO response = UserResponseDTO.builder()
-                .userId(user.getUserId())
-                .username(user.getUsername())
-                .email(user.getEmail())
-                .role(user.getRole().name())
-                .phone(user.getPhone())
-                .createdAt(user.getCreatedAt())
-                .build();
+        UserResponseDTO response = mapToResponseDTO(user);
+        addAuthLinks(response, username);
 
         return ResponseEntity.ok(Map.of("user", response));
     }
@@ -215,9 +198,29 @@ public class AuthController {
             @ApiResponse(responseCode = "404", description = "Usuario no encontrado: ")
     })
     public ResponseEntity<?> getUserIdByUsername(@Parameter(description = "Nombre de usuario", example = "Fernando Carnaca Supremo I") @PathVariable String username) {
-        log.debug("Obteniendo ID de usuario: {}", username);
+        log.debug("ADMIN - Obteniendo ID de usuario: {}", username);
         User user = userService.findByUsername(username)
                 .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado: " + username));
         return ResponseEntity.ok(Map.of("userId", user.getUserId()));
+    }
+
+    // ========== METODOS UTILITARIOS ==========
+
+    private UserResponseDTO mapToResponseDTO(User user) {
+        return UserResponseDTO.builder()
+                .userId(user.getUserId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .role(user.getRole().name())
+                .phone(user.getPhone())
+                .createdAt(user.getCreatedAt())
+                .build();
+    }
+
+    private void addAuthLinks(UserResponseDTO dto, String username) {
+        dto.add(linkTo(methodOn(AuthController.class).getMyProfile(null)).withRel("profile"));
+        dto.add(linkTo(methodOn(UserController.class).updateMyProfile(null, null)).withRel("update-profile"));
+        dto.add(linkTo(methodOn(UserController.class).deleteOwnAccount(null)).withRel("delete-account"));
+        dto.add(linkTo(methodOn(AdminController.class).getUserByUsername(username)).withRel("admin-details"));
     }
 }

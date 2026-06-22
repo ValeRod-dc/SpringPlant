@@ -19,7 +19,7 @@ public class OrderClient {
     @Autowired
     public OrderClient(WebClient.Builder webClientBuilder) {
         this.webClient = webClientBuilder
-                .baseUrl("http://MS-ORDERS")
+                .baseUrl("http://order")
                 .build();
     }
 

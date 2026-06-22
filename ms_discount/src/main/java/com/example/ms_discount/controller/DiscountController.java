@@ -12,6 +12,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
+
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/discounts")
@@ -26,13 +28,13 @@ public class DiscountController {
     @Operation(summary = "Usar cupón", description = "Aplica un cupón de descuento sobre el total del carrito y lo marca como usado.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Cupón aplicado correctamente"),
-            @ApiResponse(responseCode = "400", description = "Cupón inválido, expirado o ya usado"),
-            @ApiResponse(responseCode = "401", description = "No autenticado")
+            @ApiResponse(responseCode = "400", description = "Cupón inválido, expirado o ya usado")
     })
     public ResponseEntity<DiscountResult> useCoupon(@RequestParam String code,
                                                     @RequestParam Double cartTotal) {
         log.info("Usando cupón: {} con total carrito: ${}", code, cartTotal);
         DiscountResult result = discountService.useCoupon(code, cartTotal);
+        addResultLinks(result, code);
         if (result.isValid()) {
             return ResponseEntity.ok(result);
         } else {
@@ -44,20 +46,23 @@ public class DiscountController {
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE', 'CLIENT')")
     @Operation(summary = "Validar cupón", description = "Verifica si un cupón es válido para un total de carrito dado, sin marcarlo como usado.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Resultado de la validación"),
-            @ApiResponse(responseCode = "401", description = "No autenticado"),
-            @ApiResponse(responseCode = "404", description = "Cupón no encontrado")
+            @ApiResponse(responseCode = "200", description = "Resultado de la validación")
     })
     public ResponseEntity<DiscountResult> validateCoupon(@PathVariable String code,
                                                          @RequestParam(required = false) Double cartTotal) {
         log.info("Validando cupón: {} con total carrito: ${}", code, cartTotal != null ? cartTotal : 0);
-
         com.example.ms_discount.dto.request.ValidateCouponRequest request =
                 new com.example.ms_discount.dto.request.ValidateCouponRequest();
         request.setCode(code);
         request.setCartTotal(cartTotal != null ? cartTotal : 0.0);
-
         DiscountResult result = discountService.validateCoupon(request);
+        addResultLinks(result, code);
         return ResponseEntity.ok(result);
+    }
+
+    private void addResultLinks(DiscountResult result, String code) {
+        result.add(linkTo(methodOn(DiscountController.class).validateCoupon(code, null)).withSelfRel());
+        result.add(linkTo(methodOn(DiscountController.class).useCoupon(code, null)).withRel("use"));
+        result.add(linkTo(methodOn(DiscountControllerEmployee.class).getByCode(code)).withRel("details"));
     }
 }
