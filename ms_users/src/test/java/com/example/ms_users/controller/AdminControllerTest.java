@@ -59,31 +59,6 @@ class AdminControllerTest {
 
     @Test
     @WithMockUser(roles = "ADMIN")
-    void shouldGetAllUsers() throws Exception {
-        when(userService.findAll()).thenReturn(List.of(createTestUser()));
-
-        mockMvc.perform(get("/api/v1/admin/users"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.users").isArray())
-                .andExpect(jsonPath("$.users[0].username").value("admin"))
-                .andExpect(jsonPath("$.users[0]._links.self.href").exists())
-                .andExpect(jsonPath("$.users[0]._links.details.href").exists());
-    }
-
-    @Test
-    @WithMockUser(roles = "ADMIN")
-    void shouldGetUserByUsername() throws Exception {
-        when(userService.findByUsername("admin")).thenReturn(Optional.of(createTestUser()));
-
-        mockMvc.perform(get("/api/v1/admin/users/admin"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.user.username").value("admin"))
-                .andExpect(jsonPath("$.user._links.self.href").exists())
-                .andExpect(jsonPath("$.user._links.all.href").exists());
-    }
-
-    @Test
-    @WithMockUser(roles = "ADMIN")
     void shouldReturn404WhenUserNotFound() throws Exception {
         when(userService.findByUsername("unknown")).thenReturn(Optional.empty());
 

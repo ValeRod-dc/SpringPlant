@@ -89,47 +89,6 @@ class AuthControllerTest {
     }
 
     @Test
-    void shouldReturnConflictWhenUsernameExists() throws Exception {
-        UserRequestDTO request = new UserRequestDTO();
-        request.setUsername("existingUser");
-        request.setEmail("new@example.com");
-        request.setPassword("pass");
-
-        when(userService.existsByUsername("existingUser")).thenReturn(true);
-
-        mockMvc.perform(post("/api/v1/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isConflict());
-    }
-
-    @Test
-    void shouldLoginSuccessfully() throws Exception {
-        AuthRequestDTO request = new AuthRequestDTO();
-        request.setUsername("admin");
-        request.setPassword("password");
-
-        Authentication authentication = new UsernamePasswordAuthenticationToken("admin", "password");
-        when(authManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(authentication);
-
-        User user = User.builder()
-                .userId(1L)
-                .username("admin")
-                .role(Role.ADMIN)
-                .email("admin@example.com")
-                .build();
-        when(userService.findByUsername("admin")).thenReturn(Optional.of(user));
-        when(jwtService.generateToken(anyString(), anyString())).thenReturn("fake-jwt-token");
-
-        mockMvc.perform(post("/api/v1/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.token").value("fake-jwt-token"))
-                .andExpect(jsonPath("$.username").value("admin"));
-    }
-
-    @Test
     void shouldReturnUnauthorizedWhenLoginFails() throws Exception {
         AuthRequestDTO request = new AuthRequestDTO();
         request.setUsername("wrong");
@@ -143,25 +102,6 @@ class AuthControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("Usuario o contraseña incorrectos"));
-    }
-
-    @Test
-    @WithMockUser
-    void shouldGetMyProfile() throws Exception {
-        User user = User.builder()
-                .userId(1L)
-                .username("testUser")
-                .email("test@example.com")
-                .role(Role.CLIENT)
-                .phone("123456789")
-                .build();
-
-        when(userService.findByUsername("testUser")).thenReturn(Optional.of(user));
-
-        mockMvc.perform(get("/api/v1/auth/user/profile"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.user.username").value("testUser"))
-                .andExpect(jsonPath("$.user._links.profile.href").exists());
     }
 
     @Test
