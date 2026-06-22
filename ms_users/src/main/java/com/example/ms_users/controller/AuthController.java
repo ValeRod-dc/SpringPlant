@@ -215,7 +215,7 @@ public class AuthController {
             @ApiResponse(responseCode = "404", description = "Usuario no encontrado: ")
     })
     public ResponseEntity<?> getUserIdByUsername(@Parameter(description = "Nombre de usuario", example = "Fernando Carnaca Supremo I") @PathVariable String username) {
-        log.debug("Obteniendo ID de usuario: {}", username);
+        log.debug("ADMIN - Obteniendo ID de usuario: {}", username);
         User user = userService.findByUsername(username)
                 .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado: " + username));
         return ResponseEntity.ok(Map.of("userId", user.getUserId()));

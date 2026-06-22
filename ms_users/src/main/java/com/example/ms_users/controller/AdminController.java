@@ -122,7 +122,7 @@ public class AdminController {
     }
 
     @GetMapping("{id}")
-    @Operation(summary = "Obtener usuario por ID (con enlaces HATEOAS)", description = "Retorna el usuario con enlaces HAL.????????")
+    @Operation(summary = "Obtener usuario por ID (con enlaces HATEOAS)", description = "Retorna el usuario con enlaces HAL.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Usuario encontrado"),
             @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
@@ -134,7 +134,6 @@ public class AdminController {
             return ResponseEntity.notFound().build();
         }
         User user = userOpt.get();
-        //user.add(linkTo(methodOn(AdminController.class).findAll()).withRel("todos"));
         user.add(linkTo(methodOn(AdminController.class)
                 .findById(user.getUserId())).withSelfRel());
         return ResponseEntity.ok(user);

@@ -25,10 +25,8 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/v1/cart/admin")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "bearerAuth")
-@Tag(
-        name = "Administración de Carritos",
-        description = "Endpoints para que administradores gestionen los carritos de usuarios"
-)
+@Tag(   name = "Administración de Carritos",
+        description = "Endpoints para que administradores gestionen los carritos de usuarios")
 public class CartAdminController {
 
     private final CartService cartService;
@@ -52,12 +50,17 @@ public class CartAdminController {
         return ResponseEntity.ok(mapToResponseDTO(cart));
     }
 
-    //Tengo preguntas....
     @DeleteMapping("/user/{userId}")
     @Operation(
             summary = "Limpiar carrito de un usuario",
             description = "Elimina todos los ítems del carrito de un usuario específico (solo ADMIN)."
     )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Carrito limpiado exitosamente (sin contenido)"),
+            @ApiResponse(responseCode = "401", description = "No autenticado"),
+            @ApiResponse(responseCode = "403", description = "No tiene permisos de ADMIN"),
+            @ApiResponse(responseCode = "404", description = "Carrito no encontrado")
+    })
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> clearUserCart(@PathVariable Long userId) {
         log.info("ADMIN - Limpiando carrito del usuario {}", userId);
