@@ -19,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -45,17 +46,16 @@ public class ShippingController {
             @ApiResponse(responseCode = "404", description = "Usuario u orden no encontrada"),
             @ApiResponse(responseCode = "409", description = "Ya existe un envío para esta orden")
     })
-    public ResponseEntity<ShippingResponseDTO> createShipping(
-            Authentication authentication,
-            @Valid @RequestBody CreateShippingRequest request) {
-
+    public ResponseEntity<?> createShipping(@Valid @RequestBody CreateShippingRequest request) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
         log.info("Solicitud de creación de envío - Usuario: {}, Orden: {}", username, request.getOrderId());
         ShippingResponseDTO created = shippingService.createShipping(username, request);
 
         // Agregar enlaces HATEOAS
         created.add(linkTo(methodOn(ShippingController.class).getById(created.getShippingId())).withSelfRel());
-        created.add(linkTo(methodOn(ShippingController.class).getMyShippings(authentication)).withRel("mis-envios"));
+        created.add(linkTo(methodOn(ShippingController.class).getByOrder(created.getOrderId())).withRel("order-shippings"));
+        created.add(linkTo(methodOn(ShippingController.class).getMyShippings(authentication)).withRel("my-shippings"));
         created.add(linkTo(methodOn(ShippingController.class).updateStatus(created.getShippingId(), null)).withRel("update-status"));
 
         return ResponseEntity.status(HttpStatus.CREATED).body(created);

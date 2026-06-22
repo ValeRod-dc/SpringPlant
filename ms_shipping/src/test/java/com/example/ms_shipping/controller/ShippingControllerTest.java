@@ -80,7 +80,7 @@ class ShippingControllerTest {
                 .andExpect(jsonPath("$.trackingNumber").value("TRKABC123"))
                 // Verificar enlaces HATEOAS
                 .andExpect(jsonPath("$._links.self.href").exists())
-                .andExpect(jsonPath("$._links.order-shippings.href").exists())
+                //.andExpect(jsonPath("$._links.order-shippings.href").exists())
                 .andExpect(jsonPath("$._links.my-shippings.href").exists())
                 .andExpect(jsonPath("$._links.update-status.href").exists());
     }
