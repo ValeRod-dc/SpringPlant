@@ -22,6 +22,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(DiscountControllerEmployee.class)
 @AutoConfigureMockMvc(addFilters = false)
+@WithMockUser(roles = "EMPLOYEE")
 class DiscountControllerEmployeeTest {
 
     @Autowired

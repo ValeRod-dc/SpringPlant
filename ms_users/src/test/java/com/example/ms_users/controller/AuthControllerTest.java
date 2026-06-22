@@ -4,13 +4,17 @@ import com.example.ms_users.dto.request.AuthRequestDTO;
 import com.example.ms_users.dto.request.UserRequestDTO;
 import com.example.ms_users.model.Role;
 import com.example.ms_users.model.User;
+import com.example.ms_users.security.filter.JwtAuthFilter;
 import com.example.ms_users.security.jwt.JwtService;
+import com.example.ms_users.service.CustomUserDetailsService;
 import com.example.ms_users.service.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -28,7 +32,9 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(AuthController.class)
+@WebMvcTest(value = AuthController.class, excludeFilters = {
+        @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = JwtAuthFilter.class)
+})
 @AutoConfigureMockMvc(addFilters = false)
 class AuthControllerTest {
 
@@ -46,6 +52,9 @@ class AuthControllerTest {
 
     @MockitoBean
     private JwtService jwtService;
+
+    @MockitoBean
+    private CustomUserDetailsService customUserDetailsService;
 
     @Test
     void shouldRegisterUser() throws Exception {

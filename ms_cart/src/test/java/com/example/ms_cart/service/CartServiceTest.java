@@ -5,9 +5,7 @@ import com.example.ms_cart.client.UserClient;
 import com.example.ms_cart.dto.ProductDTO;
 import com.example.ms_cart.dto.request.AddItemRequest;
 import com.example.ms_cart.exception.custom.*;
-import com.example.ms_cart.model.Cart;
-import com.example.ms_cart.model.CartItem;
-import com.example.ms_cart.model.CartStatus;
+import com.example.ms_cart.model.*;
 import com.example.ms_cart.repository.CartRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,14 +14,11 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -41,224 +36,345 @@ class CartServiceTest {
     @InjectMocks
     private CartService cartService;
 
-    private String username;
-    private Long userId;
-    private AddItemRequest validRequest;
-    private ProductDTO validProduct;
-    private Cart emptyCart;
-    private Cart cartWithItem;
+    private final String USERNAME = "testuser";
+    private final Long USER_ID = 1L;
+    private final Long PRODUCT_ID = 101L;
+    private final int QUANTITY = 2;
+    private final int STOCK_AVAILABLE = 10;
+    private final double PRODUCT_PRICE = 25.0;
+
+    private Cart existingCart;
+    private CartItem existingItem;
+    private ProductDTO productDTO;
 
     @BeforeEach
     void setUp() {
-        username = "testuser";
-        userId = 1L;
+        // Producto simulado
+        productDTO = new ProductDTO();
+        productDTO.setId(PRODUCT_ID);
+        productDTO.setNombre("Producto Test");
+        productDTO.setPrecio(PRODUCT_PRICE);
+        productDTO.setStock(STOCK_AVAILABLE);
 
-        validRequest = new AddItemRequest();
-        validRequest.setProductId(101L);
-        validRequest.setQuantity(2);
-
-        validProduct = new ProductDTO();
-        validProduct.setId(101L);
-        validProduct.setNombre("Test Product");
-        validProduct.setPrecio(15000.0);
-        validProduct.setStock(10);
-
-        emptyCart = Cart.builder()
+        // Carrito existente con un item
+        existingCart = Cart.builder()
                 .cartId(1L)
-                .userId(userId)
+                .userId(USER_ID)
                 .status(CartStatus.ACTIVE)
                 .items(new ArrayList<>())
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
                 .build();
 
-        cartWithItem = Cart.builder()
-                .cartId(1L)
-                .userId(userId)
-                .status(CartStatus.ACTIVE)
-                .items(new ArrayList<>())
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
+        existingItem = CartItem.builder()
+                .cart(existingCart)
+                .productId(PRODUCT_ID)
+                .quantity(1)
+                .unitPrice(PRODUCT_PRICE)
+                .subtotal(PRODUCT_PRICE)
                 .build();
-        CartItem item = CartItem.builder()
-                .idItem(1L)
-                .productId(101L)
-                .quantity(2)
-                .unitPrice(15000.0)
-                .subtotal(30000.0)
-                .build();
-        cartWithItem.getItems().add(item);
+        existingCart.getItems().add(existingItem);
     }
+
+    // ========== TESTS DE addItem ==========
 
     @Test
     void shouldAddItemWhenCartExistsAndProductValid() {
-        // Given
-        when(userClient.getUserIdByUsername(username)).thenReturn(userId);
-        when(cartRepository.findByUserId(userId)).thenReturn(Optional.of(emptyCart));
-        when(productClient.getProductById(101L)).thenReturn(validProduct);
-        when(cartRepository.save(any(Cart.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        // Arrange
+        when(userClient.userExists(USERNAME)).thenReturn(true);
+        when(userClient.getUserIdByUsername(USERNAME)).thenReturn(USER_ID);
+        when(productClient.getProductById(PRODUCT_ID)).thenReturn(productDTO);
+        when(cartRepository.findByUserId(USER_ID)).thenReturn(Optional.of(existingCart));
+        when(cartRepository.save(any(Cart.class))).thenReturn(existingCart);
 
-        // When
-        Cart result = cartService.addItem(username, validRequest);
+        AddItemRequest request = new AddItemRequest();
+        request.setProductId(PRODUCT_ID);
+        request.setQuantity(QUANTITY);
 
-        // Then
+        // Act
+        Cart result = cartService.addItem(USERNAME, request);
+
+        // Assert
         assertNotNull(result);
-        assertEquals(1, result.getItems().size());
-        assertEquals(101L, result.getItems().get(0).getProductId());
-        assertEquals(2, result.getItems().get(0).getQuantity());
-        assertEquals(15000.0, result.getItems().get(0).getUnitPrice());
-
-        verify(userClient).getUserIdByUsername(username);
-        verify(cartRepository).findByUserId(userId);
-        verify(productClient).getProductById(101L);
-        verify(cartRepository).save(any(Cart.class));
+        CartItem updatedItem = result.getItems().stream()
+                .filter(item -> item.getProductId().equals(PRODUCT_ID))
+                .findFirst().orElseThrow();
+        assertEquals(1 + QUANTITY, updatedItem.getQuantity()); // 1 existente + 2 nuevos
+        assertEquals(PRODUCT_PRICE * (1 + QUANTITY), updatedItem.getSubtotal());
+        verify(cartRepository).save(existingCart);
     }
 
     @Test
     void shouldCreateCartWhenUserDoesNotHaveOne() {
-        // Given
-        when(userClient.getUserIdByUsername(username)).thenReturn(userId);
-        when(cartRepository.findByUserId(userId)).thenReturn(Optional.empty());
-        when(productClient.getProductById(101L)).thenReturn(validProduct);
-        when(cartRepository.save(any(Cart.class))).thenAnswer(invocation -> {
-            Cart cart = invocation.getArgument(0);
-            cart.setCartId(1L);
-            return cart;
-        });
+        // Arrange
+        when(userClient.userExists(USERNAME)).thenReturn(true);
+        when(userClient.getUserIdByUsername(USERNAME)).thenReturn(USER_ID);
+        when(productClient.getProductById(PRODUCT_ID)).thenReturn(productDTO);
+        when(cartRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
 
-        // When
-        Cart result = cartService.addItem(username, validRequest);
+        Cart newCart = Cart.builder()
+                .cartId(2L)
+                .userId(USER_ID)
+                .status(CartStatus.ACTIVE)
+                .items(new ArrayList<>())
+                .build();
+        when(cartRepository.save(any(Cart.class))).thenReturn(newCart);
 
-        // Then
+        AddItemRequest request = new AddItemRequest();
+        request.setProductId(PRODUCT_ID);
+        request.setQuantity(QUANTITY);
+
+        // Act
+        Cart result = cartService.addItem(USERNAME, request);
+
+        // Assert
         assertNotNull(result);
-        assertEquals(1L, result.getCartId());
-        assertEquals(1, result.getItems().size());
-
+        assertEquals(USER_ID, result.getUserId());
         verify(cartRepository).save(any(Cart.class));
     }
 
     @Test
-    void shouldThrowUserNotFoundExceptionWhenUserDoesNotExist() {
-        // Given
-        when(userClient.getUserIdByUsername(username)).thenThrow(new UserNotFoundException("User not found"));
+    void shouldThrowUserNameNotFoundExceptionWhenUserNameDoesNotExist() {
+        when(userClient.userExists("testuser")).thenReturn(false);
 
-        // When & Then
-        assertThrows(UserNotFoundException.class, () -> {
-            cartService.addItem(username, validRequest);
-        });
+        AddItemRequest request = new AddItemRequest();
+        request.setProductId(101L);
+        request.setQuantity(1);
 
-        verify(userClient).getUserIdByUsername(username);
-        verify(cartRepository, never()).findByUserId(anyLong());
-        verify(productClient, never()).getProductById(anyLong());
+        assertThrows(UserNotFoundException.class,
+                () -> cartService.addItem("testuser", request));
+
+        verify(userClient, never()).getUserIdByUsername(anyString());
     }
 
     @Test
     void shouldThrowProductNotFoundExceptionWhenProductNotFound() {
-        // Given
-        when(userClient.getUserIdByUsername(username)).thenReturn(userId);
-        when(cartRepository.findByUserId(userId)).thenReturn(Optional.of(emptyCart));
-        when(productClient.getProductById(101L)).thenThrow(new RuntimeException("Product not found"));
+        // Arrange
+        when(userClient.userExists(USERNAME)).thenReturn(true);
+        when(userClient.getUserIdByUsername(USERNAME)).thenReturn(USER_ID);
+        when(productClient.getProductById(PRODUCT_ID))
+                .thenThrow(new RuntimeException("Producto no encontrado"));
 
-        // When & Then
-        assertThrows(ProductNotFoundException.class, () -> {
-            cartService.addItem(username, validRequest);
-        });
+        AddItemRequest request = new AddItemRequest();
+        request.setProductId(PRODUCT_ID);
+        request.setQuantity(QUANTITY);
 
-        verify(productClient).getProductById(101L);
-        verify(cartRepository, never()).save(any(Cart.class));
+        // Act & Assert
+        assertThrows(ProductNotFoundException.class,
+                () -> cartService.addItem(USERNAME, request));
+
+        verify(cartRepository, never()).save(any());
     }
 
     @Test
     void shouldThrowInsufficientStockExceptionWhenStockNotEnough() {
-        // Given
-        validProduct.setStock(1);
-        when(userClient.getUserIdByUsername(username)).thenReturn(userId);
-        when(cartRepository.findByUserId(userId)).thenReturn(Optional.of(emptyCart));
-        when(productClient.getProductById(101L)).thenReturn(validProduct);
+        // Arrange
+        int requestedQuantity = 15;
+        productDTO.setStock(10);
 
-        // When & Then
-        assertThrows(InsufficientStockException.class, () -> {
-            cartService.addItem(username, validRequest);
-        });
+        when(userClient.userExists(USERNAME)).thenReturn(true);
+        when(userClient.getUserIdByUsername(USERNAME)).thenReturn(USER_ID);
+        when(productClient.getProductById(PRODUCT_ID)).thenReturn(productDTO);
 
-        verify(cartRepository, never()).save(any(Cart.class));
+        AddItemRequest request = new AddItemRequest();
+        request.setProductId(PRODUCT_ID);
+        request.setQuantity(requestedQuantity);
+
+        // Act & Assert
+        assertThrows(InsufficientStockException.class,
+                () -> cartService.addItem(USERNAME, request));
+
+        verify(cartRepository, never()).save(any());
     }
+
+    @Test
+    void shouldThrowInsufficientStockExceptionWhenUpdatingExistingItemExceedsStock() {
+        // Arrange
+        int newTotal = 15;
+        productDTO.setStock(10);
+
+        when(userClient.userExists(USERNAME)).thenReturn(true);
+        when(userClient.getUserIdByUsername(USERNAME)).thenReturn(USER_ID);
+        when(productClient.getProductById(PRODUCT_ID)).thenReturn(productDTO);
+        when(cartRepository.findByUserId(USER_ID)).thenReturn(Optional.of(existingCart));
+
+        AddItemRequest request = new AddItemRequest();
+        request.setProductId(PRODUCT_ID);
+        request.setQuantity(newTotal); // 15 > stock 10
+
+        // Act & Assert
+        assertThrows(InsufficientStockException.class,
+                () -> cartService.addItem(USERNAME, request));
+
+        verify(cartRepository, never()).save(any());
+    }
+
+    // ========== TESTS DE removeItem ==========
 
     @Test
     void shouldRemoveItemFromCart() {
-        // Given
-        Long productId = 101L;
-        when(userClient.getUserIdByUsername(username)).thenReturn(userId);
-        when(cartRepository.findByUserId(userId)).thenReturn(Optional.of(cartWithItem));
-        when(cartRepository.save(any(Cart.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        // Arrange
+        when(userClient.getUserIdByUsername(USERNAME)).thenReturn(USER_ID);
+        when(cartRepository.findByUserId(USER_ID)).thenReturn(Optional.of(existingCart));
+        when(cartRepository.save(any(Cart.class))).thenReturn(existingCart);
 
-        // When
-        Cart result = cartService.removeItem(username, productId);
+        // Act
+        Cart result = cartService.removeItem(USERNAME, PRODUCT_ID);
 
-        // Then
-        assertNotNull(result);
-        assertEquals(0, result.getItems().size());
-
-        verify(cartRepository).findByUserId(userId);
-        verify(cartRepository).save(any(Cart.class));
+        // Assert
+        assertTrue(result.getItems().isEmpty());
+        verify(cartRepository).save(existingCart);
     }
 
     @Test
-    void shouldThrowItemNotFoundExceptionWhenItemNotInCart() {
-        // Given
-        Long productId = 999L;
-        when(userClient.getUserIdByUsername(username)).thenReturn(userId);
-        when(cartRepository.findByUserId(userId)).thenReturn(Optional.of(cartWithItem));
+    void shouldThrowItemNotFoundExceptionWhenRemovingNonExistentItem() {
+        // Arrange
+        Long nonExistentProductId = 999L;
+        when(userClient.getUserIdByUsername(USERNAME)).thenReturn(USER_ID);
+        when(cartRepository.findByUserId(USER_ID)).thenReturn(Optional.of(existingCart));
 
-        // When & Then
-        assertThrows(ItemNotFoundException.class, () -> {
-            cartService.removeItem(username, productId);
-        });
+        // Act & Assert
+        assertThrows(ItemNotFoundException.class,
+                () -> cartService.removeItem(USERNAME, nonExistentProductId));
 
-        verify(cartRepository).findByUserId(userId);
-        verify(cartRepository, never()).save(any(Cart.class));
+        verify(cartRepository, never()).save(any());
     }
+
+    @Test
+    void shouldThrowCartNotFoundExceptionWhenRemovingFromNonExistentCart() {
+        // Arrange
+        when(userClient.getUserIdByUsername(USERNAME)).thenReturn(USER_ID);
+        when(cartRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThrows(CartNotFoundException.class,
+                () -> cartService.removeItem(USERNAME, PRODUCT_ID));
+
+        verify(cartRepository, never()).save(any());
+    }
+
+    // ========== TESTS DE clearCart ==========
 
     @Test
     void shouldClearCart() {
-        // Given
-        when(userClient.getUserIdByUsername(username)).thenReturn(userId);
-        when(cartRepository.findByUserId(userId)).thenReturn(Optional.of(cartWithItem));
-        when(cartRepository.save(any(Cart.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        // Arrange
+        when(userClient.getUserIdByUsername(USERNAME)).thenReturn(USER_ID);
+        when(cartRepository.findByUserId(USER_ID)).thenReturn(Optional.of(existingCart));
+        when(cartRepository.save(any(Cart.class))).thenReturn(existingCart);
 
-        // When
-        cartService.clearCart(username);
+        // Act
+        cartService.clearCart(USERNAME);
 
-        // Then
-        verify(cartRepository).findByUserId(userId);
-        verify(cartRepository).save(any(Cart.class));
+        // Assert
+        assertTrue(existingCart.getItems().isEmpty());
+        verify(cartRepository).save(existingCart);
     }
 
     @Test
-    void shouldFindCartByUserIdOrThrowWhenExists() {
-        // Given
-        when(cartRepository.findByUserId(userId)).thenReturn(Optional.of(emptyCart));
+    void shouldThrowCartNotFoundExceptionWhenClearingNonExistentCart() {
+        // Arrange
+        when(userClient.getUserIdByUsername(USERNAME)).thenReturn(USER_ID);
+        when(cartRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
 
-        // When
-        Cart result = cartService.findByUserIdOrThrow(userId);
+        // Act & Assert
+        assertThrows(CartNotFoundException.class,
+                () -> cartService.clearCart(USERNAME));
 
-        // Then
+        verify(cartRepository, never()).save(any());
+    }
+
+    // ========== TESTS DE getUserCart ==========
+
+    @Test
+    void shouldGetUserCart() {
+        // Arrange
+        when(userClient.getUserIdByUsername(USERNAME)).thenReturn(USER_ID);
+        when(cartRepository.findByUserId(USER_ID)).thenReturn(Optional.of(existingCart));
+
+        // Act
+        Cart result = cartService.getUserCart(USERNAME);
+
+        // Assert
         assertNotNull(result);
-        assertEquals(1L, result.getCartId());
-
-        verify(cartRepository).findByUserId(userId);
+        assertEquals(USER_ID, result.getUserId());
+        verify(cartRepository).findByUserId(USER_ID);
     }
 
     @Test
-    void shouldThrowCartNotFoundExceptionWhenCartDoesNotExist() {
-        // Given
-        when(cartRepository.findByUserId(userId)).thenReturn(Optional.empty());
+    void shouldThrowCartNotFoundExceptionWhenCartNotFound() {
+        // Arrange
+        when(userClient.getUserIdByUsername(USERNAME)).thenReturn(USER_ID);
+        when(cartRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
 
-        // When & Then
-        assertThrows(CartNotFoundException.class, () -> {
-            cartService.findByUserIdOrThrow(userId);
-        });
+        // Act & Assert
+        assertThrows(CartNotFoundException.class,
+                () -> cartService.getUserCart(USERNAME));
+    }
 
-        verify(cartRepository).findByUserId(userId);
+    // ========== TESTS DE updateItemQuantity ==========
+
+    @Test
+    void shouldUpdateItemQuantity() {
+        // Arrange
+        int newQuantity = 5;
+        when(userClient.getUserIdByUsername(USERNAME)).thenReturn(USER_ID);
+        when(productClient.getProductById(PRODUCT_ID)).thenReturn(productDTO);
+        when(cartRepository.findByUserId(USER_ID)).thenReturn(Optional.of(existingCart));
+        when(cartRepository.save(any(Cart.class))).thenReturn(existingCart);
+
+        // Act
+        Cart result = cartService.updateItemQuantity(USERNAME, PRODUCT_ID, newQuantity);
+
+        // Assert
+        CartItem updatedItem = result.getItems().stream()
+                .filter(item -> item.getProductId().equals(PRODUCT_ID))
+                .findFirst().orElseThrow();
+        assertEquals(newQuantity, updatedItem.getQuantity());
+        assertEquals(PRODUCT_PRICE * newQuantity, updatedItem.getSubtotal());
+        verify(cartRepository).save(existingCart);
+    }
+
+    @Test
+    void shouldRemoveItemWhenQuantityIsZeroOrNegative() {
+        // Arrange
+        int newQuantity = 0;
+        when(userClient.getUserIdByUsername(USERNAME)).thenReturn(USER_ID);
+        when(cartRepository.findByUserId(USER_ID)).thenReturn(Optional.of(existingCart));
+        when(cartRepository.save(any(Cart.class))).thenReturn(existingCart);
+
+        // Act
+        Cart result = cartService.updateItemQuantity(USERNAME, PRODUCT_ID, newQuantity);
+
+        // Assert
+        assertTrue(result.getItems().isEmpty());
+        verify(cartRepository).save(existingCart);
+    }
+
+    @Test
+    void shouldThrowItemNotFoundExceptionWhenUpdatingNonExistentItem() {
+        // Arrange
+        Long nonExistentProductId = 999L;
+        when(userClient.getUserIdByUsername(USERNAME)).thenReturn(USER_ID);
+        when(cartRepository.findByUserId(USER_ID)).thenReturn(Optional.of(existingCart));
+
+        // Act & Assert
+        assertThrows(ItemNotFoundException.class,
+                () -> cartService.updateItemQuantity(USERNAME, nonExistentProductId, 5));
+
+        verify(cartRepository, never()).save(any());
+    }
+
+    @Test
+    void shouldThrowInsufficientStockExceptionWhenUpdateQuantityExceedsStock() {
+        // Arrange
+        int newQuantity = 15;
+        productDTO.setStock(10);
+        when(userClient.getUserIdByUsername(USERNAME)).thenReturn(USER_ID);
+        when(productClient.getProductById(PRODUCT_ID)).thenReturn(productDTO);
+        when(cartRepository.findByUserId(USER_ID)).thenReturn(Optional.of(existingCart));
+
+        // Act & Assert
+        assertThrows(InsufficientStockException.class,
+                () -> cartService.updateItemQuantity(USERNAME, PRODUCT_ID, newQuantity));
+
+        verify(cartRepository, never()).save(any());
     }
 }
