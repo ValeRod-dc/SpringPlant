@@ -6,6 +6,14 @@
   <component name="ChangeListManager">
     <list default="true" id="a92577e3-2f3b-43eb-9757-d1a7677f42e2" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/api-gateway/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/api-gateway/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ms-cart/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ms-cart/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ms-discount/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ms-discount/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ms-payment/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ms-payment/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ms-payment/src/test/java/com/example/ms_payment/service/PaymentServiceTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/ms-payment/src/test/java/com/example/ms_payment/service/PaymentServiceTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ms-shipping/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ms-shipping/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ms-users/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ms-users/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ms-users/src/test/java/com/example/ms_users/service/UserServiceTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/ms-users/src/test/java/com/example/ms_users/service/UserServiceTest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

@@ -51,27 +51,42 @@ class UserServiceTest {
 
     @Test
     void shouldReturnTrueWhenUserExistsById() {
+        // Given
         when(userRepository.existsById(1L)).thenReturn(true);
-        assertTrue(userService.existsById(1L));
+
+        // When
+        boolean result = userService.existsById(1L);
+
+        // Then
+        assertTrue(result);
         verify(userRepository).existsById(1L);
     }
 
     @Test
     void shouldReturnFalseWhenUserDoesNotExistById() {
+        // Given
         when(userRepository.existsById(999L)).thenReturn(false);
-        assertFalse(userService.existsById(999L));
+
+        // When
+        boolean result = userService.existsById(999L);
+
+        // Then
+        assertFalse(result);
         verify(userRepository).existsById(999L);
     }
 
     @Test
     void shouldRegisterUserWhenValid() {
+        // Given
         when(userRepository.findByUsername("newUser")).thenReturn(Optional.empty());
         when(userRepository.findByEmail("new@example.com")).thenReturn(Optional.empty());
         when(passwordEncoder.encode("password")).thenReturn("encoded");
         when(userRepository.save(any(User.class))).thenReturn(testUser);
 
+        // When
         User result = userService.register("newUser", "password", Role.CLIENT, "new@example.com", "987654321", "Nueva Calle");
 
+        // Then
         assertNotNull(result);
         assertEquals("testUser", result.getUsername());
         verify(userRepository).save(any(User.class));
@@ -79,7 +94,10 @@ class UserServiceTest {
 
     @Test
     void shouldThrowUsernameAlreadyExistsExceptionOnRegister() {
+        // Given
         when(userRepository.findByUsername("testUser")).thenReturn(Optional.of(testUser));
+
+        // When / Then
         assertThrows(UsernameAlreadyExistsException.class, () ->
                 userService.register("testUser", "pass", Role.CLIENT, "email@test.com", "123", "addr")
         );
@@ -88,8 +106,11 @@ class UserServiceTest {
 
     @Test
     void shouldThrowEmailAlreadyExistsExceptionOnRegister() {
+        // Given
         when(userRepository.findByUsername("newUser")).thenReturn(Optional.empty());
         when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
+
+        // When / Then
         assertThrows(EmailAlreadyExistsException.class, () ->
                 userService.register("newUser", "pass", Role.CLIENT, "test@example.com", "123", "addr")
         );
@@ -98,8 +119,13 @@ class UserServiceTest {
 
     @Test
     void shouldFindUserByUsername() {
+        // Given
         when(userRepository.findByUsername("testUser")).thenReturn(Optional.of(testUser));
+
+        // When
         Optional<User> result = userService.findByUsername("testUser");
+
+        // Then
         assertTrue(result.isPresent());
         assertEquals("testUser", result.get().getUsername());
         verify(userRepository).findByUsername("testUser");
@@ -107,8 +133,13 @@ class UserServiceTest {
 
     @Test
     void shouldFindUserByUsernameOrThrow() {
+        // Given
         when(userRepository.findByUsername("testUser")).thenReturn(Optional.of(testUser));
+
+        // When
         User result = userService.findByUsernameOrThrow("testUser");
+
+        // Then
         assertNotNull(result);
         assertEquals("testUser", result.getUsername());
         verify(userRepository).findByUsername("testUser");
@@ -116,13 +147,17 @@ class UserServiceTest {
 
     @Test
     void shouldThrowUserNotFoundExceptionWhenUsernameNotFound() {
+        // Given
         when(userRepository.findByUsername("unknown")).thenReturn(Optional.empty());
+
+        // When / Then
         assertThrows(UserNotFoundException.class, () -> userService.findByUsernameOrThrow("unknown"));
         verify(userRepository).findByUsername("unknown");
     }
 
     @Test
     void shouldUpdateUserProfile() {
+        // Given
         UserUpdateDTO updateDTO = new UserUpdateDTO();
         updateDTO.setEmail("new@example.com");
         updateDTO.setPhone("111111111");
@@ -131,7 +166,10 @@ class UserServiceTest {
         when(userRepository.findByUsername("testUser")).thenReturn(Optional.of(testUser));
         when(userRepository.save(any(User.class))).thenReturn(testUser);
 
+        // When
         User result = userService.updateUserProfile("testUser", updateDTO);
+
+        // Then
         assertNotNull(result);
         assertEquals("new@example.com", result.getEmail());
         assertEquals("111111111", result.getPhone());
@@ -141,13 +179,14 @@ class UserServiceTest {
 
     @Test
     void shouldThrowEmailAlreadyExistsWhenUpdatingToExistingEmail() {
+        // Given
         UserUpdateDTO updateDTO = new UserUpdateDTO();
         updateDTO.setEmail("existing@example.com");
-
         User otherUser = User.builder().userId(2L).username("other").email("existing@example.com").build();
         when(userRepository.findByUsername("testUser")).thenReturn(Optional.of(testUser));
         when(userRepository.findByEmail("existing@example.com")).thenReturn(Optional.of(otherUser));
 
+        // When / Then
         assertThrows(EmailAlreadyExistsException.class, () ->
                 userService.updateUserProfile("testUser", updateDTO)
         );
@@ -156,16 +195,23 @@ class UserServiceTest {
 
     @Test
     void shouldDeleteByUsername() {
+        // Given
         when(userRepository.findByUsername("testUser")).thenReturn(Optional.of(testUser));
         doNothing().when(userRepository).deleteByUsername("testUser");
 
+        // When
         userService.deleteByUsername("testUser");
+
+        // Then
         verify(userRepository).deleteByUsername("testUser");
     }
 
     @Test
     void shouldThrowUserNotFoundExceptionWhenDeletingNonExisting() {
+        // Given
         when(userRepository.findByUsername("unknown")).thenReturn(Optional.empty());
+
+        // When / Then
         assertThrows(UserNotFoundException.class, () -> userService.deleteByUsername("unknown"));
         verify(userRepository, never()).deleteByUsername(anyString());
     }
