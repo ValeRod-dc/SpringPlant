@@ -1,133 +1,133 @@
 services:
-  eureka-server:
-    build: ./ms_eureka
-    container_name: eureka-server
+  ms-eureka:
+    build: ./ms-eureka
+    container_name: ms-eureka
     ports:
       - "8761:8761"
     networks:
       - microservices-network
 
-  product:
-    build: ./product
-    container_name: product
+  ms-product:
+    build: ./ms-product
+    container_name: ms-product
     ports:
       - "9000:9000"
     environment:
       SPRING_PROFILES_ACTIVE: docker
     depends_on:
-      - eureka-server
+      - ms-eureka
     networks:
       - microservices-network
 
-  inventory:
-    build: ./inventory
-    container_name: inventory
+  ms-inventory:
+    build: ./ms-inventory
+    container_name: ms-inventory
     ports:
       - "9002:9002"
     environment:
       SPRING_PROFILES_ACTIVE: docker
     depends_on:
-      - eureka-server
-      - product
+      - ms-eureka
+      - ms-product
     networks:
       - microservices-network
 
-  order:
-    build: ./order
-    container_name: order
+  ms-order:
+    build: ./ms-order
+    container_name: ms-order
     ports:
       - "9003:9003"
     environment:
       SPRING_PROFILES_ACTIVE: docker
     depends_on:
-      - eureka-server
-      - product
+      - ms-eureka
+      - ms-product
     networks:
       - microservices-network
 
-  notification:
-    build: ./notification
-    container_name: notification
+  ms-notification:
+    build: ./ms-notification
+    container_name: ms-notification
     ports:
       - "9099:9099"
     environment:
       SPRING_PROFILES_ACTIVE: docker
     depends_on:
-      - eureka-server
+      - ms-eureka
     networks:
       - microservices-network
 
-  review:
-    build: ./review
-    container_name: review
+  ms-review:
+    build: ./ms-review
+    container_name: ms-review
     ports:
       - "9097:9097"
     environment:
       SPRING_PROFILES_ACTIVE: docker
     depends_on:
-      - eureka-server
-      - product
-      - order
+      - ms-eureka
+      - ms-product
+      - ms-order
     networks:
       - microservices-network
 
   ms-users:
-    build: ./ms_users
+    build: ./ms-users
     container_name: ms-users
     ports:
       - "9090:9090"
     environment:
       SPRING_PROFILES_ACTIVE: docker
     depends_on:
-      - eureka-server
+      - ms-eureka
     networks:
       - microservices-network
 
   ms-cart:
-    build: ./ms_cart
+    build: ./ms-cart
     container_name: ms-cart
     ports:
       - "9092:9092"
     environment:
       SPRING_PROFILES_ACTIVE: docker
     depends_on:
-      - eureka-server
+      - ms-eureka
     networks:
       - microservices-network
 
   ms-payment:
-    build: ./ms_payment
+    build: ./ms-payment
     container_name: ms-payment
     ports:
       - "9094:9094"
     environment:
       SPRING_PROFILES_ACTIVE: docker
     depends_on:
-      - eureka-server
+      - ms-eureka
     networks:
       - microservices-network
 
   ms-shipping:
-    build: ./ms_shipping
+    build: ./ms-shipping
     container_name: ms-shipping
     ports:
       - "9096:9096"
     environment:
       SPRING_PROFILES_ACTIVE: docker
     depends_on:
-      - eureka-server
+      - ms-eureka
     networks:
       - microservices-network
 
   ms-discount:
-    build: ./ms_discount
+    build: ./ms-discount
     container_name: ms-discount
     ports:
       - "9098:9098"
     environment:
       SPRING_PROFILES_ACTIVE: docker
     depends_on:
-      - eureka-server
+      - ms-eureka
     networks:
       - microservices-network
 
@@ -139,12 +139,12 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
     depends_on:
-      - eureka-server
-      - product
-      - inventory
-      - order
-      - notification
-      - review
+      - ms-eureka
+      - ms-product
+      - ms-inventory
+      - ms-order
+      - ms-notification
+      - ms-review
       - ms-users
       - ms-cart
       - ms-payment
