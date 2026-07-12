@@ -63,6 +63,8 @@ public class InventoryService {
             throw new IllegalArgumentException("El producto con id " + dto.getProductId() + " no existe.");
         }
 
+        validateQuantityCoherence(dto.getQuantityAvailable(), dto.getQuantityReserved(), product);
+
         Inventory inventory = new Inventory();
         inventory.setProductId(dto.getProductId());
         inventory.setQuantityAvailable(dto.getQuantityAvailable());
@@ -81,6 +83,14 @@ public class InventoryService {
                     return new InventoryNotFoundException("Inventario no encontrado con el id: " + id);
                 });
 
+        ProductDto product = productClient.getProductById(inventory.getProductId()).getBody();
+        if (product == null) {
+            log.warn("Producto con id {} no existe en el catálogo", inventory.getProductId());
+            throw new IllegalArgumentException("El producto con id " + inventory.getProductId() + " no existe.");
+        }
+
+        validateQuantityCoherence(dto.getQuantityAvailable(), dto.getQuantityReserved(), product);
+
         inventory.setQuantityAvailable(dto.getQuantityAvailable());
         inventory.setQuantityReserved(dto.getQuantityReserved());
         inventory.setStoreLocation(dto.getStoreLocation());
@@ -88,6 +98,16 @@ public class InventoryService {
         InventoryResponseDTO result = mapToDTO(repository.save(inventory));
         log.info("Inventario actualizado con id: {}", result.getId());
         return result;
+    }
+
+    private void validateQuantityCoherence(Integer quantityAvailable, Integer quantityReserved, ProductDto product) {
+        int totalQuantity = quantityAvailable + quantityReserved;
+        if (totalQuantity > product.getStock()) {
+            log.warn("Cantidad total de inventario ({}) supera el stock del catálogo ({}) para productId: {}",
+                    totalQuantity, product.getStock(), product.getId());
+            throw new IllegalArgumentException("La cantidad total de inventario (" + totalQuantity +
+                    ") no puede superar el stock registrado en el catálogo (" + product.getStock() + ").");
+        }
     }
 
     public String delete(Long id) {

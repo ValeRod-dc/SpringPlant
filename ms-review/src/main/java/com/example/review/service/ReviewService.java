@@ -76,6 +76,16 @@ public class ReviewService {
             throw new IllegalArgumentException("La orden con id " + dto.getOrderId() + " no existe.");
         }
 
+        if (!order.getClientId().equals(dto.getUserId())) {
+            log.warn("La orden {} no pertenece al usuario {}", dto.getOrderId(), dto.getUserId());
+            throw new IllegalArgumentException("La orden no pertenece al usuario indicado.");
+        }
+
+        if (!"DELIVERED".equals(order.getStatus())) {
+            log.warn("La orden {} no está entregada (estado actual: {})", dto.getOrderId(), order.getStatus());
+            throw new IllegalArgumentException("Solo se pueden reseñar productos de órdenes entregadas.");
+        }
+
         Review review = new Review();
         review.setUserId(dto.getUserId());
         review.setProductId(dto.getProductId());

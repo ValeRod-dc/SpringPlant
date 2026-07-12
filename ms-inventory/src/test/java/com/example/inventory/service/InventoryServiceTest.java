@@ -64,7 +64,7 @@ class InventoryServiceTest {
         productDto.setId(10L);
         productDto.setName("Monstera deliciosa");
         productDto.setPrice(15990.0);
-        productDto.setStock(10);
+        productDto.setStock(100);
         productDto.setProductStatus("ACTIVE");
         return productDto;
     }
@@ -184,6 +184,7 @@ class InventoryServiceTest {
         InventoryRequestDTO dto = new InventoryRequestDTO(10L, 80, 2, "Bodega Valparaiso");
 
         Mockito.when(repository.findById(1L)).thenReturn(Optional.of(existente));
+        Mockito.when(productClient.getProductById(10L)).thenReturn(ResponseEntity.ok(buildProductDto()));
         Mockito.when(repository.save(any(Inventory.class))).thenReturn(existente);
 
         // When
@@ -204,6 +205,31 @@ class InventoryServiceTest {
 
         // When / Then
         assertThrows(InventoryNotFoundException.class, () -> service.update(99L, dto));
+        verify(repository, never()).save(any(Inventory.class));
+    }
+
+    @Test
+    void deberiaLanzarExcepcionCuandoCantidadSuperaStockDelCatalogoAlCrear() {
+        // Given
+        InventoryRequestDTO dto = new InventoryRequestDTO(10L, 90, 20, "Bodega Santiago Centro");
+        Mockito.when(productClient.getProductById(10L)).thenReturn(ResponseEntity.ok(buildProductDto()));
+
+        // When / Then
+        assertThrows(IllegalArgumentException.class, () -> service.save(dto));
+        verify(repository, never()).save(any(Inventory.class));
+    }
+
+    @Test
+    void deberiaLanzarExcepcionCuandoCantidadSuperaStockDelCatalogoAlActualizar() {
+        // Given
+        Inventory existente = buildInventory();
+        InventoryRequestDTO dto = new InventoryRequestDTO(10L, 90, 20, "Bodega Santiago Centro");
+
+        Mockito.when(repository.findById(1L)).thenReturn(Optional.of(existente));
+        Mockito.when(productClient.getProductById(10L)).thenReturn(ResponseEntity.ok(buildProductDto()));
+
+        // When / Then
+        assertThrows(IllegalArgumentException.class, () -> service.update(1L, dto));
         verify(repository, never()).save(any(Inventory.class));
     }
 
