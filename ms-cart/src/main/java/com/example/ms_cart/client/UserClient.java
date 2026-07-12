@@ -54,7 +54,7 @@ public class UserClient {
             return exists;
         } catch (Exception e) {
             log.error("Error validando usuario '{}' con ms-users: {}", username, e.getMessage(), e);
-            return false;
+            throw new UserNotFoundException("No se pudo verificar el usuario '" + username + "': servicio no disponible");
         }
     }
 

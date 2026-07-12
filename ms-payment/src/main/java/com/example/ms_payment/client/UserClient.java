@@ -1,5 +1,6 @@
 package com.example.ms_payment.client;
 
+import com.example.ms_payment.exception.custom.UserNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -34,7 +35,7 @@ public class UserClient {
             return exists;
         } catch (Exception e) {
             log.error("Error validando usuario '{}' con ms_users: {}", username, e.getMessage(), e);
-            return false;
+            throw new UserNotFoundException("No se pudo verificar el usuario '" + username + "': servicio no disponible");
         }
     }
 }
