@@ -38,8 +38,8 @@ Cliente (Postman / Frontend)
    API Gateway :9093
         ↓
 ┌─────────────────────────────────────────────────────┐
-│  ms-users  │  ms-product  │  ms-order  │    ...    │
-│   :9090    │    :9000     │   :9003    │           │
+│  ms-users  │  ms-product  │  ms-order  │    ...     │
+│   :9090    │    :9000     │   :9003    │            │
 └─────────────────────────────────────────────────────┘
         ↑
   Eureka Server :8761
