@@ -121,7 +121,7 @@ public class ShippingController {
 
         String username = authentication != null ? authentication.getName() : "anonimo";
         log.info("Consultando envíos del usuario: {}", username);
-        // TODO: Obtener userId real desde ms_users
+        // TODO: Obtener userId real desde ms-users
         Long userId = 1L;
         List<ShippingResponseDTO> shippings = shippingService.getByUser(userId);
 

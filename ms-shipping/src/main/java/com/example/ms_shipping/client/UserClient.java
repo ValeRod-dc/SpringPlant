@@ -69,7 +69,7 @@ public class UserClient {
     }
 
     public boolean userExists(String username) {
-        log.debug("Consultando existencia de usuario en ms_users: {}", username);
+        log.debug("Consultando existencia de usuario en ms-users: {}", username);
         try {
             String token = getAuthToken();
 
@@ -89,7 +89,7 @@ public class UserClient {
             log.debug("Usuario {} - Existe: {}", username, exists);
             return exists;
         } catch (Exception e) {
-            log.error("Error validando usuario '{}' con ms_users: {}", username, e.getMessage(), e);
+            log.error("Error validando usuario '{}' con ms-users: {}", username, e.getMessage(), e);
             return false;
         }
     }
