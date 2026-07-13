@@ -26,6 +26,7 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class ShippingServiceTest {
 
+    //mocks = dependencias falsas
     @Mock
     private ShippingRepository shippingRepository;
 
@@ -35,6 +36,7 @@ class ShippingServiceTest {
     @Mock
     private UserClient userClient;
 
+    //crea instancia real del ShippingService e inyecta los mocks de arriba como si fueran sus dependencias reales
     @InjectMocks
     private ShippingService shippingService;
 
@@ -42,18 +44,23 @@ class ShippingServiceTest {
     private OrderDTO validOrder;
     private Shipping savedShipping;
 
+    //Prepara los datos de prueba una sola vez para cada test
     @BeforeEach
     void setUp() {
+
+        //Crea objeto request, body - POST
         validRequest = new CreateShippingRequest();
         validRequest.setOrderId(2L);
         validRequest.setAddress("Av. Siempre Viva 123");
 
+        //Crea una orden falsa que simula la respuesta del ms-order para así crear un envío
         validOrder = new OrderDTO();
         validOrder.setId(2L);
         validOrder.setClientId(102L);
         validOrder.setPaymentStatus("PAID");
         validOrder.setTotalAmount(125.50);
 
+        //Crea el objeto Shipping que simula lo que devolvería la bd luego de guardar
         savedShipping = Shipping.builder()
                 .shippingId(1L)
                 .orderId(2L)
