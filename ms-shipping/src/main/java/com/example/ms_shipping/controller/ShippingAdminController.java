@@ -1,6 +1,8 @@
 package com.example.ms_shipping.controller;
 
+import com.example.ms_shipping.client.UserClient;
 import com.example.ms_shipping.dto.response.ShippingResponseDTO;
+import com.example.ms_shipping.exception.custom.UserNotFoundException;
 import com.example.ms_shipping.model.ShippingStatus;
 import com.example.ms_shipping.service.ShippingService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -30,6 +32,7 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
 public class ShippingAdminController {
 
     private final ShippingService shippingService;
+    private final UserClient userClient;
 
     @GetMapping("/user/{userId}")
     @PreAuthorize("hasRole('ADMIN')")
@@ -37,6 +40,7 @@ public class ShippingAdminController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Lista de envíos del usuario",
                     content = @Content(schema = @Schema(implementation = ShippingResponseDTO.class))),
+            @ApiResponse(responseCode = "403", description = "Acceso denegado - Token inválido, expirado o rol insuficiente (ADMIN)."),
             @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
     })
     public ResponseEntity<List<ShippingResponseDTO>> getUserShippings(
@@ -44,6 +48,13 @@ public class ShippingAdminController {
             @PathVariable Long userId) {
 
         log.info("ADMIN - Consultando envíos del usuario: {}", userId);
+
+        // Validar que el usuario existe en ms-users
+        if (!userClient.userExistsById(userId)) {
+            log.warn("ADMIN - Usuario no encontrado con ID: {}", userId);
+            throw new UserNotFoundException("Usuario no encontrado con ID: " + userId);
+        }
+
         List<ShippingResponseDTO> shippings = shippingService.getByUser(userId);
 
         // Agregar enlaces
@@ -61,11 +72,12 @@ public class ShippingAdminController {
     @Operation(summary = "Listar envíos por estado")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Lista de envíos con ese estado",
-                    content = @Content(schema = @Schema(implementation = ShippingResponseDTO.class)))
+                    content = @Content(schema = @Schema(implementation = ShippingResponseDTO.class))),
+            @ApiResponse(responseCode = "403", description = "Acceso denegado - Token inválido, expirado o rol insuficiente (ADMIN)."),
     })
     public ResponseEntity<List<ShippingResponseDTO>> getByStatus(
             @Parameter(description = "Estado del envío", example = "PENDING", required = true,
-                    schema = @Schema(implementation = ShippingStatus.class))
+                    schema = @Schema(allowableValues = {"PENDING", "PREPARING", "SHIPPED", "IN_TRANSIT", "DELIVERED", "CANCELLED"}))
             @PathVariable ShippingStatus status) {
 
         log.info("ADMIN - Consultando envíos por estado: {}", status);
@@ -84,7 +96,8 @@ public class ShippingAdminController {
     @Operation(summary = "Verificar si existe un envío para una orden")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Resultado de la verificación",
-                    content = @Content(schema = @Schema(type = "boolean")))
+                    content = @Content(schema = @Schema(type = "boolean"))),
+            @ApiResponse(responseCode = "403", description = "Acceso denegado - Token inválido, expirado o rol insuficiente (ADMIN).")
     })
     public ResponseEntity<Boolean> shippingExistsByOrder(
             @Parameter(description = "ID de la orden", example = "1001", required = true)

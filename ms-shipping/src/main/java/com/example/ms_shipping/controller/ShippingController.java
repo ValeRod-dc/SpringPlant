@@ -136,11 +136,12 @@ public class ShippingController {
 
     @PutMapping("/{id}/status")
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
-    @Operation(summary = "Actualizar el estado de un envío")
+    @Operation(summary = "Actualizar el estado de un envío (ADMIN Y EMPLOYEE)")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Estado actualizado correctamente",
                     content = @Content(schema = @Schema(implementation = ShippingResponseDTO.class))),
             @ApiResponse(responseCode = "400", description = "Estado inválido o transición no permitida"),
+            @ApiResponse(responseCode = "403", description = "Acceso denegado - Token inválido, expirado o rol insuficiente (ADMIN / EMPLOYEE)."),
             @ApiResponse(responseCode = "404", description = "Envío no encontrado")
     })
     public ResponseEntity<ShippingResponseDTO> updateStatus(
