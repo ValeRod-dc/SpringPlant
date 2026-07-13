@@ -80,18 +80,22 @@ class ShippingServiceTest {
         when(userClient.userExists(username)).thenReturn(true);
         when(orderClient.getOrderById(2L)).thenReturn(validOrder);
         when(shippingRepository.existsByOrderId(2L)).thenReturn(false);
+        //Cuando intente guardar cualquier objeto Shipping en la bd, devuelve el savedShipping que preparamos.
         when(shippingRepository.save(any(Shipping.class))).thenReturn(savedShipping);
 
-        // When
+        // When, ejecuta el metodo real a probar con los datos preparados.
         ShippingResponseDTO result = shippingService.createShipping(username, validRequest);
 
-        // Then
+        // Then, verifica que no sea nulo
         assertNotNull(result);
+
+        // Verifica que los datos del resultado son exactamente los esperados.
         assertEquals(1L, result.getShippingId());
         assertEquals(2L, result.getOrderId());
         assertEquals("TRKABC123", result.getTrackingNumber());
         assertEquals(ShippingStatus.PENDING, result.getStatus());
 
+        //Verifica que el service efectivamente llamó a cada uno de esos métodos durante su ejecución.
         verify(userClient).userExists(username);
         verify(orderClient).getOrderById(2L);
         verify(shippingRepository).existsByOrderId(2L);
