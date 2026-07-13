@@ -126,6 +126,57 @@ class ProductServiceTest {
     }
 
     @Test
+    void deberiaLanzarExcepcionCuandoNombreYaExisteAlCrear() {
+        // Given
+        Product otroProducto = buildProduct();
+        otroProducto.setId(2L);
+        Product nuevoProducto = buildProduct();
+        nuevoProducto.setId(null);
+        Mockito.when(repository.findByName("Monstera deliciosa")).thenReturn(Optional.of(otroProducto));
+
+        // When / Then
+        assertThrows(IllegalArgumentException.class, () -> service.createProduct(nuevoProducto));
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void deberiaLanzarExcepcionCuandoNombreYaExisteAlActualizar() {
+        // Given
+        Product existente = buildProduct();
+        Product otroProducto = buildProduct();
+        otroProducto.setId(2L);
+        otroProducto.setName("Ficus lyrata");
+        Product nuevosDatos = buildProduct();
+        nuevosDatos.setName("Ficus lyrata");
+
+        Mockito.when(repository.findById(1L)).thenReturn(Optional.of(existente));
+        Mockito.when(repository.findByName("Ficus lyrata")).thenReturn(Optional.of(otroProducto));
+
+        // When / Then
+        assertThrows(IllegalArgumentException.class, () -> service.updateProduct(1L, nuevosDatos));
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void deberiaActualizarProductoCuandoConservaSuPropioNombre() {
+        // Given
+        Product existente = buildProduct();
+        Product nuevosDatos = buildProduct();
+        nuevosDatos.setPrice(19990.0);
+
+        Mockito.when(repository.findById(1L)).thenReturn(Optional.of(existente));
+        Mockito.when(repository.findByName("Monstera deliciosa")).thenReturn(Optional.of(existente));
+        Mockito.when(repository.save(any(Product.class))).thenReturn(existente);
+
+        // When
+        Product resultado = service.updateProduct(1L, nuevosDatos);
+
+        // Then
+        assertEquals(19990.0, resultado.getPrice());
+        verify(repository).save(existente);
+    }
+
+    @Test
     void deberiaActualizarProductoCuandoExiste() {
         // Given
         Product existente = buildProduct();

@@ -48,6 +48,7 @@ public class ProductService {
     @Transactional
     public Product createProduct(Product product) {
         log.info("Creando producto: {}", product.getName());
+        validateNameNotTaken(product.getName(), null);
         Product saved = productRepository.save(product);
         log.info("Producto creado con id: {}", saved.getId());
         return saved;
@@ -57,6 +58,7 @@ public class ProductService {
     public Product updateProduct(Long id, Product productDetails) {
         log.info("Actualizando producto con id: {}", id);
         Product existingProduct = getProductById(id);
+        validateNameNotTaken(productDetails.getName(), id);
 
         existingProduct.setName(productDetails.getName());
         existingProduct.setDescription(productDetails.getDescription());
@@ -98,5 +100,14 @@ public class ProductService {
     public List<Product> getProductsWithMinimumStock(Integer minStock) {
         log.info("Buscando productos con stock mínimo: {}", minStock);
         return productRepository.findByStockGreaterThan(minStock);
+    }
+
+    private void validateNameNotTaken(String name, Long excludedId) {
+        productRepository.findByName(name).ifPresent(existing -> {
+            if (!existing.getId().equals(excludedId)) {
+                log.warn("Ya existe un producto con el nombre: {}", name);
+                throw new IllegalArgumentException("Ya existe un producto con el nombre: " + name);
+            }
+        });
     }
 }

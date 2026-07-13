@@ -60,8 +60,8 @@ class OrderServiceTest {
     private ProductDto buildProductDto(Long id, String nombre, Double precio, Integer stock) {
         ProductDto dto = new ProductDto();
         dto.setId(id);
-        dto.setNombre(nombre);
-        dto.setPrecio(precio);
+        dto.setName(nombre);
+        dto.setPrice(precio);
         dto.setStock(stock);
         return dto;
     }

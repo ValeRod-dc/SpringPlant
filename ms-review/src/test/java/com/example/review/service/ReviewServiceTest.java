@@ -80,7 +80,7 @@ class ReviewServiceTest {
         OrderDto orderDto = new OrderDto();
         orderDto.setId(3L);
         orderDto.setClientId(5L);
-        orderDto.setStatus("COMPLETED");
+        orderDto.setStatus("DELIVERED");
         return orderDto;
     }
 
@@ -210,6 +210,34 @@ class ReviewServiceTest {
         assertThrows(IllegalArgumentException.class, () -> service.save(dto));
         verify(productClient).getProductById(10L);
         verify(orderClient).getOrderById(3L);
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void deberiaLanzarExcepcionCuandoOrdenNoPerteneceAlUsuario() {
+        // Given
+        ReviewRequestDTO dto = buildRequestDTO();
+        OrderDto order = buildOrderDto();
+        order.setClientId(999L);
+        Mockito.when(productClient.getProductById(10L)).thenReturn(ResponseEntity.ok(buildProductDto()));
+        Mockito.when(orderClient.getOrderById(3L)).thenReturn(ResponseEntity.ok(order));
+
+        // When / Then
+        assertThrows(IllegalArgumentException.class, () -> service.save(dto));
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void deberiaLanzarExcepcionCuandoOrdenNoEstaEntregada() {
+        // Given
+        ReviewRequestDTO dto = buildRequestDTO();
+        OrderDto order = buildOrderDto();
+        order.setStatus("PENDING");
+        Mockito.when(productClient.getProductById(10L)).thenReturn(ResponseEntity.ok(buildProductDto()));
+        Mockito.when(orderClient.getOrderById(3L)).thenReturn(ResponseEntity.ok(order));
+
+        // When / Then
+        assertThrows(IllegalArgumentException.class, () -> service.save(dto));
         verify(repository, never()).save(any());
     }
 

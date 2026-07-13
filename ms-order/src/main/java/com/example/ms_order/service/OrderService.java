@@ -40,11 +40,11 @@ public class OrderService {
 
             if (product.getStock() < item.getQuantity()) {
                 log.warn("Stock insuficiente para producto: {} (disponible: {}, solicitado: {})",
-                        product.getNombre(), product.getStock(), item.getQuantity());
-                throw new IllegalArgumentException("Stock insuficiente para el producto: " + product.getNombre());
+                        product.getName(), product.getStock(), item.getQuantity());
+                throw new IllegalArgumentException("Stock insuficiente para el producto: " + product.getName());
             }
 
-            item.setPrice(product.getPrecio());
+            item.setPrice(product.getPrice());
             item.setOrder(order);
             total += item.getPrice() * item.getQuantity();
         }
