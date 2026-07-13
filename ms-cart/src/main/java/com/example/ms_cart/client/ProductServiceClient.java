@@ -24,7 +24,7 @@ public class ProductServiceClient {
         log.info("Consultando producto con id: {} en ms-product", productId);
         try {
             ProductDTO product = webClient.get()
-                    .uri("/api/v1/productos/{id}", productId)
+                    .uri("/api/v1/products/{id}", productId)
                     .retrieve()
                     .onStatus(status -> status.is4xxClientError(),
                             response -> Mono.error(new RuntimeException("Producto no encontrado")))
