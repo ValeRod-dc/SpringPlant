@@ -11,24 +11,24 @@ Proyecto de Desarrollo Full-Stack — Caso Semestral
 
 ---
 
-## 🏗️ Arquitectura
+##  Arquitectura
 
 El proyecto está compuesto por los siguientes microservicios:
 
 | Microservicio | Carpeta | Puerto | Responsabilidad |
 |---|---|---|---|
-| 🔍 **Eureka Server** | `ms-eureka` | 8761 | Service discovery y registro de microservicios |
-| 🌐 **API Gateway** | `api-gateway` | 9093 | Punto de entrada único, enrutamiento y balanceo de carga |
-| 👤 **Usuarios** | `ms-users` | 9090 | Gestión de cuentas y autenticación JWT |
-| 🌱 **Productos** | `ms-product` | 9000 | Catálogo de plantas y productos |
-| 🛒 **Carrito** | `ms-cart` | 9092 | Gestión del carrito de compras |
-| 📋 **Órdenes** | `ms-order` | 9003 | Ciclo de vida de los pedidos |
-| 💳 **Pagos** | `ms-payment` | 9094 | Procesamiento de pagos |
-| 📦 **Inventario** | `ms-inventory` | 9002 | Control de stock y disponibilidad |
-| 🚚 **Envíos** | `ms-shipping` | 9096 | Gestión de despacho y seguimiento |
-| ⭐ **Reseñas** | `ms-review` | 9097 | Valoraciones y comentarios de productos |
-| 🏷️ **Descuentos** | `ms-discount` | 9098 | Cupones y descuentos |
-| 🔔 **Notificaciones** | `ms-notification` | 9099 | Envío de alertas y correos |
+| **Eureka Server** | `ms-eureka` | 8761 | Service discovery y registro de microservicios |
+| **API Gateway** | `api-gateway` | 9093 | Punto de entrada único, enrutamiento y balanceo de carga |
+| **Usuarios** | `ms-users` | 9090 | Gestión de cuentas y autenticación JWT |
+| **Productos** | `ms-product` | 9000 | Catálogo de plantas y productos |
+| **Carrito** | `ms-cart` | 9092 | Gestión del carrito de compras |
+| **Órdenes** | `ms-order` | 9003 | Ciclo de vida de los pedidos |
+| **Pagos** | `ms-payment` | 9094 | Procesamiento de pagos |
+| **Inventario** | `ms-inventory` | 9002 | Control de stock y disponibilidad |
+| **Envíos** | `ms-shipping` | 9096 | Gestión de despacho y seguimiento |
+| **Reseñas** | `ms-review` | 9097 | Valoraciones y comentarios de productos |
+| **Descuentos** | `ms-discount` | 9098 | Cupones y descuentos |
+| **Notificaciones** | `ms-notification` | 9099 | Envío de alertas y correos |
 
 ### Flujo de comunicación
 
@@ -48,7 +48,7 @@ Cliente (Postman / Frontend)
 
 ---
 
-## 🛠️ Tecnologías
+## Tecnologías
 
 - **Java 21** — Lenguaje principal
 - **Spring Boot** — Framework base de cada microservicio
@@ -65,7 +65,7 @@ Cliente (Postman / Frontend)
 
 ---
 
-## 🌐 API Gateway
+## API Gateway
 
 El API Gateway actúa como **punto de entrada único** para todos los microservicios. Todas las peticiones pasan por el gateway, que las enruta al microservicio correspondiente usando Eureka para resolución de nombres (`lb://`).
 
@@ -105,7 +105,7 @@ http://localhost:9099/swagger-ui/index.html   ← ms-notification
 
 ---
 
-## 🐳 Ejecución con Docker
+## Ejecución con Docker
 
 ### Prerrequisitos
 
@@ -180,7 +180,7 @@ Cuando se ejecuta con Docker Compose, se activa automáticamente el perfil `dock
 
 ---
 
-## 🧪 Testing
+## Testing
 
 El proyecto incluye tests unitarios usando **JUnit 5** y **Mockito**, con cobertura de código medida mediante **JaCoCo**.
 
@@ -235,7 +235,7 @@ Desde la carpeta de cada microservicio:
 
 ---
 
-## 🚀 Ejecución local (sin Docker)
+## Ejecución local (sin Docker)
 
 ### Prerrequisitos
 
@@ -289,7 +289,7 @@ Desde la carpeta de cada microservicio:
 
 ---
 
-## 📁 Estructura del repositorio
+## Estructura del repositorio
 
 ```
 SpringPlant/
